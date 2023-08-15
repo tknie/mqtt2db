@@ -24,7 +24,7 @@ require (
 	github.com/jackc/pgx/v5 v5.4.3 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/tknie/adabas-go-api v1.7.9 // indirect
+	github.com/tknie/adabas-go-api v1.7.10-0.20230815200510-cfc5e1f30ebf // indirect
 	github.com/tknie/errorrepo v0.0.0-20230429175850-6f60500223d5 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
