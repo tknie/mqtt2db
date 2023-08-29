@@ -114,6 +114,7 @@ func main() {
 	logger := &logger{}
 	msgChan := make(chan *paho.Publish)
 
+	services.ServerMessage("Connecting ... %s", server)
 	conn, err := net.Dial("tcp", server)
 	if err != nil {
 		log.Fatalf("Failed to dial to %s: %s", server, err)
@@ -128,6 +129,7 @@ func main() {
 	c.SetDebugLogger(logger)
 	c.SetErrorLogger(logger)
 
+	services.ServerMessage("Connecting paho")
 	cp := &paho.Connect{
 		KeepAlive:  30,
 		ClientID:   clientid,
@@ -151,7 +153,7 @@ func main() {
 		log.Fatalf("Failed to connect to %s : %d - %s", server, ca.ReasonCode, ca.Properties.ReasonString)
 	}
 
-	fmt.Printf("Connected to %s\n", server)
+	services.ServerMessage("Connecting MQTT to %s", server)
 
 	ic := make(chan os.Signal, 1)
 	signal.Notify(ic, os.Interrupt, syscall.SIGTERM)
@@ -177,7 +179,8 @@ func main() {
 	if sa.Reasons[0] != byte(qos) {
 		log.Fatalf("Failed to subscribe to %s : %d", topic, sa.Reasons[0])
 	}
-	log.Printf("Subscribed to %s", topic)
+	services.ServerMessage("Subscribed MQTT to %s", topic)
+	defer services.ServerMessage("MQTT exited")
 
 	for m := range msgChan {
 		log.Println(m.Topic, ": Message:", string(m.Payload))
@@ -231,6 +234,7 @@ func initDatabase() {
 		log.Fatalf("Database log creating failed: %v %T", err, status)
 	}
 	dbid = id
+	services.ServerMessage("Database initiated")
 }
 
 func close() {
@@ -241,8 +245,13 @@ type logger struct {
 }
 
 func (l *logger) Println(v ...interface{}) {
-
+	s := ""
+	for range v {
+		s += "%v "
+	}
+	s += "\n"
+	tlog.Log.Debugf(s, v...)
 }
 func (l *logger) Printf(format string, v ...interface{}) {
-
+	tlog.Log.Debugf(format, v...)
 }
