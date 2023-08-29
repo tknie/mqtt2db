@@ -39,7 +39,7 @@ func init() {
 }
 
 func startLog() {
-	fmt.Println("Init logging")
+	services.ServerMessage("Init logging")
 	fileName := "db.trace.log"
 	level := os.Getenv("ENABLE_DB_DEBUG")
 	logLevel := logrus.WarnLevel
@@ -72,24 +72,41 @@ func startLog() {
 	logRus.SetOutput(f)
 	logRus.Infof("Init logrus")
 	tlog.Log = logRus
-	fmt.Println("Logging running")
+	services.ServerMessage("Logging initiated ...")
 }
 
 func main() {
-	server := os.Getenv("MQTT_TOPIC_URL")
-	topic := os.Getenv("MQTT_TOPIC")
+	server := ""
+	topic := ""
 	var qos int
 	var clientid string
-	username := os.Getenv("MQTT_TOPIC_USERNAME")
-	password := os.Getenv("MQTT_TOPIC_PASSWORD")
+	username := ""
+	password := ""
 
-	flag.StringVar(&server, "server", server, "The MQTT server to connect to ex: 127.0.0.1:1883")
+	flag.StringVar(&server, "server", "", "The MQTT server to connect to ex: 127.0.0.1:1883")
 	flag.StringVar(&topic, "topic", "#", "Topic to subscribe to")
 	flag.IntVar(&qos, "qos", 0, "The QoS to subscribe to messages at")
 	flag.StringVar(&clientid, "clientid", "", "A clientid for the connection")
-	flag.StringVar(&username, "username", username, "A username to authenticate to the MQTT server")
-	flag.StringVar(&password, "password", password, "Password to match username")
+	flag.StringVar(&username, "username", "", "A username to authenticate to the MQTT server")
+	flag.StringVar(&password, "password", "", "Password to match username")
 	flag.Parse()
+
+	if topic == "" {
+		topic = os.Getenv("MQTT_TOPIC")
+	}
+	if server == "" {
+		server = os.Getenv("MQTT_TOPIC_URL")
+	}
+	if username == "" {
+		username = os.Getenv("MQTT_TOPIC_USERNAME")
+	}
+	if password == "" {
+		password = os.Getenv("MQTT_TOPIC_PASSWORD")
+	}
+
+	services.ServerMessage("MQTT server: %s", server)
+	services.ServerMessage("MQTT topic: %s", topic)
+	services.ServerMessage("MQTT username: %s", username)
 
 	initDatabase()
 	defer close()
