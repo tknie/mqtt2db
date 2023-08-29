@@ -84,7 +84,7 @@ func main() {
 	password := ""
 
 	flag.StringVar(&server, "server", "", "The MQTT server to connect to ex: 127.0.0.1:1883")
-	flag.StringVar(&topic, "topic", "#", "Topic to subscribe to")
+	flag.StringVar(&topic, "topic", "", "Topic to subscribe to")
 	flag.IntVar(&qos, "qos", 0, "The QoS to subscribe to messages at")
 	flag.StringVar(&clientid, "clientid", "", "A clientid for the connection")
 	flag.StringVar(&username, "username", "", "A username to authenticate to the MQTT server")
@@ -93,6 +93,9 @@ func main() {
 
 	if topic == "" {
 		topic = os.Getenv("MQTT_TOPIC")
+	}
+	if topic == "" {
+		topic = "#"
 	}
 	if server == "" {
 		server = os.Getenv("MQTT_TOPIC_URL")
