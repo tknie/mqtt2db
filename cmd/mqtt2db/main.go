@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -60,7 +61,10 @@ func startLog() {
 	if p == "" {
 		p = os.TempDir()
 	}
-	f, err := os.OpenFile(p+"/"+fileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+
+	path := filepath.FromSlash(p + string(os.PathSeparator) + fileName)
+	f, err := os.OpenFile(path,
+		os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println("Error opening log:", err)
 		return
@@ -72,12 +76,19 @@ func startLog() {
 }
 
 func main() {
-	server := flag.String("server", "127.0.0.1:1883", "The MQTT server to connect to ex: 127.0.0.1:1883")
-	topic := flag.String("topic", "#", "Topic to subscribe to")
-	qos := flag.Int("qos", 0, "The QoS to subscribe to messages at")
-	clientid := flag.String("clientid", "", "A clientid for the connection")
-	username := flag.String("username", "", "A username to authenticate to the MQTT server")
-	password := flag.String("password", "", "Password to match username")
+	server := os.Getenv("MQTT_TOPIC_URL")
+	topic := os.Getenv("MQTT_TOPIC")
+	var qos int
+	var clientid string
+	username := os.Getenv("MQTT_TOPIC_USERNAME")
+	password := os.Getenv("MQTT_TOPIC_PASSWORD")
+
+	flag.StringVar(&server, "server", server, "The MQTT server to connect to ex: 127.0.0.1:1883")
+	flag.StringVar(&topic, "topic", "#", "Topic to subscribe to")
+	flag.IntVar(&qos, "qos", 0, "The QoS to subscribe to messages at")
+	flag.StringVar(&clientid, "clientid", "", "A clientid for the connection")
+	flag.StringVar(&username, "username", username, "A username to authenticate to the MQTT server")
+	flag.StringVar(&password, "password", password, "Password to match username")
 	flag.Parse()
 
 	initDatabase()
@@ -86,9 +97,9 @@ func main() {
 	logger := &logger{}
 	msgChan := make(chan *paho.Publish)
 
-	conn, err := net.Dial("tcp", *server)
+	conn, err := net.Dial("tcp", server)
 	if err != nil {
-		log.Fatalf("Failed to connect to %s: %s", *server, err)
+		log.Fatalf("Failed to dial to %s: %s", server, err)
 	}
 
 	c := paho.NewClient(paho.ClientConfig{
@@ -102,16 +113,16 @@ func main() {
 
 	cp := &paho.Connect{
 		KeepAlive:  30,
-		ClientID:   *clientid,
+		ClientID:   clientid,
 		CleanStart: true,
-		Username:   *username,
-		Password:   []byte(*password),
+		Username:   username,
+		Password:   []byte(password),
 	}
 
-	if *username != "" {
+	if username != "" {
 		cp.UsernameFlag = true
 	}
-	if *password != "" {
+	if password != "" {
 		cp.PasswordFlag = true
 	}
 
@@ -120,10 +131,10 @@ func main() {
 		log.Fatalln(err)
 	}
 	if ca.ReasonCode != 0 {
-		log.Fatalf("Failed to connect to %s : %d - %s", *server, ca.ReasonCode, ca.Properties.ReasonString)
+		log.Fatalf("Failed to connect to %s : %d - %s", server, ca.ReasonCode, ca.Properties.ReasonString)
 	}
 
-	fmt.Printf("Connected to %s\n", *server)
+	fmt.Printf("Connected to %s\n", server)
 
 	ic := make(chan os.Signal, 1)
 	signal.Notify(ic, os.Interrupt, syscall.SIGTERM)
@@ -138,7 +149,7 @@ func main() {
 	}()
 
 	subscriptions := make(map[string]paho.SubscribeOptions)
-	subscriptions[*topic] = paho.SubscribeOptions{QoS: byte(*qos)}
+	subscriptions[topic] = paho.SubscribeOptions{QoS: byte(qos)}
 
 	sa, err := c.Subscribe(context.Background(), &paho.Subscribe{
 		Subscriptions: subscriptions,
@@ -146,22 +157,18 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	if sa.Reasons[0] != byte(*qos) {
-		log.Fatalf("Failed to subscribe to %s : %d", *topic, sa.Reasons[0])
+	if sa.Reasons[0] != byte(qos) {
+		log.Fatalf("Failed to subscribe to %s : %d", topic, sa.Reasons[0])
 	}
-	log.Printf("Subscribed to %s", *topic)
+	log.Printf("Subscribed to %s", topic)
 
 	for m := range msgChan {
 		log.Println(m.Topic, ": Message:", string(m.Payload))
 		x := make(map[string]interface{})
-		fmt.Println("EVENT....")
+		tlog.Log.Debugf("EVENT....")
 		err := json.Unmarshal(m.Payload, &x)
 		if err != nil {
 			fmt.Println("JSON unmarshal fails:", err)
-		} else {
-			for n, v := range x {
-				fmt.Println(n, v)
-			}
 		}
 		t, err := time.Parse(layout, x["Time"].(string))
 		if err == nil {
@@ -191,7 +198,10 @@ func initDatabase() {
 	if password == "" {
 		password = os.Getenv("MQTT_STORE_PASS")
 	}
-	dbRef.User = "admin"
+	dbRef.User = os.Getenv("MQTT_STORE_USER")
+	if dbRef.User == "" {
+		dbRef.User = "admin"
+	}
 
 	services.ServerMessage("Storing MQTT data to table '%s'", tableName)
 	id, err := flynn.RegisterDatabase(dbRef, password)
@@ -201,7 +211,7 @@ func initDatabase() {
 
 	status, err := id.CreateTableIfNotExists(tableName, &event{})
 	if err != nil {
-		log.Fatalf("Databaase log creating failed: %v %T", err, status)
+		log.Fatalf("Database log creating failed: %v %T", err, status)
 	}
 	dbid = id
 }
