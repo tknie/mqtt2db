@@ -185,8 +185,9 @@ func main() {
 	services.ServerMessage("Subscribed MQTT to %s", topic)
 	defer services.ServerMessage("MQTT exited")
 
+	counter := uint64(0)
 	for m := range msgChan {
-		log.Println(m.Topic, ": Message:", string(m.Payload))
+		tlog.Log.Debugf("%s: Message: %s", m.Topic, string(m.Payload))
 		x := make(map[string]interface{})
 		tlog.Log.Debugf("EVENT....")
 		err := json.Unmarshal(m.Payload, &x)
@@ -205,6 +206,11 @@ func main() {
 			if err != nil {
 				log.Fatal("Error inserting record", err)
 			}
+			fmt.Print(".")
+			if counter%60 == 0 {
+				fmt.Println()
+			}
+			counter++
 		}
 	}
 }
