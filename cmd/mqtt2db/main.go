@@ -194,7 +194,7 @@ func main() {
 		log.Fatalf("Failed to subscribe to %s : %d", topic, sa.Reasons[0])
 	}
 	services.ServerMessage("Subscribed MQTT to %s", topic)
-	defer services.ServerMessage("MQTT exited")
+	defer services.ServerMessage("MQTT exiting")
 
 	counter := uint64(0)
 	for m := range msgChan {
@@ -206,8 +206,8 @@ func main() {
 			fmt.Println("JSON unmarshal fails:", err)
 		}
 		t, err := time.ParseInLocation(layout, x["Time"].(string), time.Local)
-		//t, err := time.Parse(layout, x["Time"].(string))
 		if err == nil {
+			counter++
 			e := &event{Time: t.UTC()}
 			insert := &common.Entries{DataStruct: e,
 				Fields: []string{"*"}}
@@ -218,11 +218,10 @@ func main() {
 			if err != nil {
 				log.Fatal("Error inserting record", err)
 			}
-			fmt.Print(".")
-			if counter%60 == 0 {
+			fmt.Printf("%d ", counter)
+			if counter%30 == 0 {
 				fmt.Println()
 			}
-			counter++
 		}
 	}
 }
