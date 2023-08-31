@@ -181,8 +181,6 @@ func main() {
 		os.Exit(0)
 	}()
 
-	aloc, _ := time.LoadLocation("Europe/Berlin")
-
 	subscriptions := make(map[string]paho.SubscribeOptions)
 	subscriptions[topic] = paho.SubscribeOptions{QoS: byte(qos)}
 
@@ -207,7 +205,7 @@ func main() {
 		if err != nil {
 			fmt.Println("JSON unmarshal fails:", err)
 		}
-		t, err := time.ParseInLocation(layout, x["Time"].(string), aloc)
+		t, err := time.ParseInLocation(layout, x["Time"].(string), time.Local)
 		//t, err := time.Parse(layout, x["Time"].(string))
 		if err == nil {
 			e := &event{Time: t.UTC()}
