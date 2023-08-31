@@ -1,3 +1,14 @@
+/*
+* Copyright 2023 Thorsten A. Knieling
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*    http://www.apache.org/licenses/LICENSE-2.0
+*
+ */
+
 package main
 
 import (
@@ -170,6 +181,8 @@ func main() {
 		os.Exit(0)
 	}()
 
+	aloc, _ := time.LoadLocation("Europe/Berlin")
+
 	subscriptions := make(map[string]paho.SubscribeOptions)
 	subscriptions[topic] = paho.SubscribeOptions{QoS: byte(qos)}
 
@@ -194,9 +207,10 @@ func main() {
 		if err != nil {
 			fmt.Println("JSON unmarshal fails:", err)
 		}
-		t, err := time.Parse(layout, x["Time"].(string))
+		t, err := time.ParseInLocation(layout, x["Time"].(string), aloc)
+		//t, err := time.Parse(layout, x["Time"].(string))
 		if err == nil {
-			e := &event{Time: t}
+			e := &event{Time: t.UTC()}
 			insert := &common.Entries{DataStruct: e,
 				Fields: []string{"*"}}
 			m := x[""].(map[string]interface{})
