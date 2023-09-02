@@ -6,7 +6,7 @@ This small application stores MQTT data received by Tasmota via MQTT server into
 
 ## Workflow
 
-Inside MQTT the corresponding MQTT data need to be predefined like this:
+Inside MQTT the corresponding MQTT message need to be predefined like this:
 
 ```json
 {
@@ -24,7 +24,7 @@ During startup phase of the MQTT2DB application
 - create an trigger and function creating the current timestamp into the record field "inserted_on"
 - create an ascending and descending index of "inserted_on"
 
-It creates a connection to an postgres database and an Mosquitto MQTT server listening on the given topic.
+MQTT2DB creates a connection to an postgres database and an Mosquitto MQTT server listening on the given topic.
 
 When MQTT2DB has received a message then the message will be inserted into postgres.
 The interval for each event entry will be defined by Tasmota MQTT configuration.
@@ -38,14 +38,14 @@ I manage to run the overall application
 - MQTT2DB
 - Grafana
 
-all in a Docker container or Podman pod.
+all are running in a Docker container or Podman pod.
 
 ![MQTT2DB Diagramm](files/DiagrammMQTT2DB.png)
 
-Tasmota is sending the MQTT messages to my MQTT mosqitto server. Here it is optional to listen with other application to that MQTT messages. My MQTT2DB application listen to the messages and writes all messages into the Postgres database.
-With minimal afford the destination database may be another MariaDB or even Adabas database.
+Tasmota server is sending the MQTT messages to my MQTT Mosquitto server. Here it is optional to listen with other application to that MQTT messages. My MQTT2DB application listen to the messages and writes all into the Postgres database.
+With minimal afford the destination database may be another MariaDB or even Adabas databases.
 
-The corresponding Tasmota power level message is send each minute.
+The corresponding Tasmota power level message is configured to send each minute.
 
 ## Podman start command
 
@@ -78,3 +78,10 @@ podman run --name mqtt2db --pod mqtt_pod \
         -e MQTT_TOPIC_PASSWORD=$MQTT_PASSWORD \
         -d github.com/tknie/mqtt2db:latest
 ```
+
+# Summary
+
+The MQTT2DB offers easy store of MQTT power messages to store into Postgres. It may be help for developers to work with similar approaches storing MQTT data into databases.
+
+______________________
+These tools are provided as-is and without warranty or support. Users are free to use, fork and modify them, subject to the license agreement. 
