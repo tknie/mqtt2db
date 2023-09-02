@@ -44,6 +44,28 @@ var dbid common.RegDbID
 var tableName string
 var logRus = logrus.StandardLogger()
 
+var SQLbatches = []string{
+	`ALTER TABLE public.home ADD inserted_on timestamptz NULL;`,
+	`CREATE OR REPLACE FUNCTION public.update_homefct_timestamp()
+			RETURNS trigger
+			LANGUAGE plpgsql
+		   AS $function$
+		   BEGIN
+				  NEW.inserted_on = CURRENT_TIMESTAMP;
+				  RETURN NEW;
+		   END;
+		   $function$
+		   ;`,
+	`ALTER FUNCTION public.update_timestamp() OWNER TO postgres;`,
+	`GRANT ALL ON FUNCTION public.update_timestamp() TO postgres;`,
+	`create or replace trigger update_home_timestamp before
+		   insert
+		   on
+		   public.home for each row execute function update_homefct_timestamp();`,
+	`CREATE INDEX home_inserted_on_idx ON public.home USING btree (inserted_on);`,
+	`CREATE INDEX home_inserted_on_idx_desc ON public.home USING btree (inserted_on DESC);`,
+	`ALTER TABLE public.home ADD id serial4 NOT NULL;`}
+
 func init() {
 	tableName = os.Getenv("MQTT_STORE_TABLENAME")
 	startLog()
@@ -51,8 +73,8 @@ func init() {
 
 func startLog() {
 	services.ServerMessage("Init logging")
-	fileName := "db.trace.log"
-	level := os.Getenv("ENABLE_DB_DEBUG")
+	fileName := "mqtt2db.trace.log"
+	level := os.Getenv("ENABLE_MQTT2DB_DEBUG")
 	logLevel := logrus.WarnLevel
 	switch level {
 	case "debug", "1":
@@ -200,7 +222,7 @@ func main() {
 	for m := range msgChan {
 		tlog.Log.Debugf("%s: Message: %s", m.Topic, string(m.Payload))
 		x := make(map[string]interface{})
-		tlog.Log.Debugf("EVENT....")
+		tlog.Log.Debugf("EVENT....%s", string(m.Payload))
 		err := json.Unmarshal(m.Payload, &x)
 		if err != nil {
 			fmt.Println("JSON unmarshal fails:", err)
@@ -216,12 +238,13 @@ func main() {
 			e.Total = m["total_in"].(float64)
 			err = dbid.Insert(tableName, insert)
 			if err != nil {
-				log.Fatal("Error inserting record", err)
+				log.Fatal("Error inserting record: ", err)
 			}
-			fmt.Printf("%d ", counter)
+			fmt.Printf("%04d ", counter)
 			if counter%30 == 0 {
 				fmt.Println()
 			}
+			os.Stdout.Sync()
 		}
 	}
 }
@@ -252,6 +275,14 @@ func initDatabase() {
 	status, err := id.CreateTableIfNotExists(tableName, &event{})
 	if err != nil {
 		log.Fatalf("Database log creating failed: %v %T", err, status)
+	}
+	if status == common.CreateCreated {
+		for i, batch := range SQLbatches {
+			err = id.Batch(batch)
+			if err != nil {
+				log.Fatalf("Database batch(%03d) failed: %v", i, err)
+			}
+		}
 	}
 	dbid = id
 	services.ServerMessage("Database initiated")
