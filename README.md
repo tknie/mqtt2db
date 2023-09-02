@@ -79,7 +79,7 @@ podman run --name mqtt2db --pod mqtt_pod \
         -d github.com/tknie/mqtt2db:latest
 ```
 
-# Summary
+## Summary
 
 The MQTT2DB offers easy store of MQTT power messages to store into Postgres. It may be help for developers to work with similar approaches storing MQTT data into databases.
 
