@@ -289,20 +289,23 @@ func initDatabase() {
 	}
 	var status common.CreateStatus
 	count := 0
-	for err == nil {
+	for err == nil && count < 10 {
+		count++
+		tlog.Log.Debugf("Try count=%d", count)
+
 		// create table if not exists
 		status, err = id.CreateTableIfNotExists(tableName, &event{})
 		if err != nil {
 			if count < 10 {
 				services.ServerMessage("Wait because of creation err %T: %v", status, err)
 				time.Sleep(10 * time.Second)
-				count++
 				services.ServerMessage("Skipt counter increased to %d", count)
 				continue
 			} else {
 				log.Fatalf("Database log creating failed: %v %T", err, status)
 			}
 		}
+		tlog.Log.Debugf("Received status=%v", status)
 		// if database is created, then call batch commands
 		if status == common.CreateCreated {
 			for i, batch := range SQLbatches {
@@ -319,9 +322,9 @@ func initDatabase() {
 		if err != nil {
 			services.ServerMessage("Pinging failed: %v", err)
 			time.Sleep(10 * time.Second)
-			count++
 			services.ServerMessage("Skipt counter increased to %d", count)
 		}
+		tlog.Log.Debugf("End error=%v", err)
 	}
 
 	services.ServerMessage("Database initiated")
