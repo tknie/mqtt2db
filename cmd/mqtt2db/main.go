@@ -166,6 +166,8 @@ func main() {
 	c.SetErrorLogger(logger)
 
 	services.ServerMessage("Connecting paho")
+
+	// connect to MQTT and listen and subscribe
 	cp := &paho.Connect{
 		KeepAlive:  30,
 		ClientID:   clientid,
@@ -181,6 +183,7 @@ func main() {
 		cp.PasswordFlag = true
 	}
 
+	// connecting to MQTT server
 	ca, err := c.Connect(context.Background(), cp)
 	if err != nil {
 		log.Fatalln(err)
@@ -203,6 +206,7 @@ func main() {
 		os.Exit(0)
 	}()
 
+	// subscribe to a subscription MQTT topic
 	subscriptions := make(map[string]paho.SubscribeOptions)
 	subscriptions[topic] = paho.SubscribeOptions{QoS: byte(qos)}
 
@@ -217,7 +221,12 @@ func main() {
 	}
 	services.ServerMessage("Subscribed MQTT to %s", topic)
 	defer services.ServerMessage("MQTT exiting")
+	loopIncomingMessages(msgChan)
+}
 
+// loop loop through receiving all messages from MQTT and store them into
+// the database
+func loopIncomingMessages(msgChan chan *paho.Publish) {
 	counter := uint64(0)
 	for m := range msgChan {
 		tlog.Log.Debugf("%s: Message: %s", m.Topic, string(m.Payload))
@@ -227,6 +236,7 @@ func main() {
 		if err != nil {
 			fmt.Println("JSON unmarshal fails:", err)
 		}
+		// parse in location for local TZ
 		t, err := time.ParseInLocation(layout, x["Time"].(string), time.Local)
 		if err == nil {
 			counter++
@@ -249,6 +259,12 @@ func main() {
 	}
 }
 
+// initDatabase initialize database by
+//   - creating storage table
+//   - create index for inserted_on
+//   - create function for updating inserted_on the current
+//     timestamp
+//   - add id serial
 func initDatabase() {
 	url := os.Getenv("MQTT_STORE_URL")
 	if url == "" || tableName == "" {
@@ -271,23 +287,47 @@ func initDatabase() {
 	if err != nil {
 		log.Fatalf("Register error log: %v", err)
 	}
-
-	status, err := id.CreateTableIfNotExists(tableName, &event{})
-	if err != nil {
-		log.Fatalf("Database log creating failed: %v %T", err, status)
-	}
-	if status == common.CreateCreated {
-		for i, batch := range SQLbatches {
-			err = id.Batch(batch)
-			if err != nil {
-				log.Fatalf("Database batch(%03d) failed: %v", i, err)
+	var status common.CreateStatus
+	count := 0
+	for err == nil {
+		// create table if not exists
+		status, err = id.CreateTableIfNotExists(tableName, &event{})
+		if err != nil {
+			if count < 10 {
+				services.ServerMessage("Wait because of creation err %T: %v", status, err)
+				time.Sleep(10 * time.Second)
+				count++
+				services.ServerMessage("Skipt counter increased to %d", count)
+				continue
+			} else {
+				log.Fatalf("Database log creating failed: %v %T", err, status)
 			}
 		}
+		// if database is created, then call batch commands
+		if status == common.CreateCreated {
+			for i, batch := range SQLbatches {
+				err = id.Batch(batch)
+				if err != nil {
+					log.Fatalf("Database batch(%03d) failed: %v", i, err)
+				}
+			}
+		}
+		dbid = id
+
+		// final ping checks if database is online
+		err = id.Ping()
+		if err != nil {
+			services.ServerMessage("Pinging failed: %v", err)
+			time.Sleep(10 * time.Second)
+			count++
+			services.ServerMessage("Skipt counter increased to %d", count)
+		}
 	}
-	dbid = id
+
 	services.ServerMessage("Database initiated")
 }
 
+// close close and unregister flynn identifier
 func close() {
 	defer flynn.Unregister(dbid)
 }
