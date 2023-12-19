@@ -207,8 +207,8 @@ func main() {
 	}()
 
 	// subscribe to a subscription MQTT topic
-	subscriptions := make(map[string]paho.SubscribeOptions)
-	subscriptions[topic] = paho.SubscribeOptions{QoS: byte(qos)}
+	subscriptions := make([]paho.SubscribeOptions, 0)
+	subscriptions = append(subscriptions, paho.SubscribeOptions{QoS: byte(qos)})
 
 	sa, err := c.Subscribe(context.Background(), &paho.Subscribe{
 		Subscriptions: subscriptions,
@@ -283,7 +283,7 @@ func initDatabase() {
 	}
 
 	services.ServerMessage("Storing MQTT data to table '%s'", tableName)
-	id, err := flynn.RegisterDatabase(dbRef, password)
+	id, err := flynn.Handler(dbRef, password)
 	if err != nil {
 		log.Fatalf("Register error log: %v", err)
 	}
@@ -332,7 +332,7 @@ func initDatabase() {
 
 // close close and unregister flynn identifier
 func close() {
-	defer flynn.Unregister(dbid)
+	defer dbid.FreeHandler()
 }
 
 type logger struct {
