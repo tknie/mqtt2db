@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.5
 
 require (
-	github.com/eclipse/paho.golang v0.20.0
+	github.com/eclipse/paho.golang v0.21.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/tknie/flynn v0.0.0-20231219052103-d375a125d96d
 	github.com/tknie/log v0.0.0-20231006083545-fabe25f4fb0e
