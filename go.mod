@@ -20,7 +20,7 @@ require (
 	github.com/godror/knownpb v0.1.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
-	github.com/jackc/pgx/v5 v5.5.1 // indirect
+	github.com/jackc/pgx/v5 v5.5.4 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/tknie/adabas-go-api v1.7.11-0.20230927173718-c1f8db24a2a8 // indirect
