@@ -243,9 +243,9 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 			e := &event{Time: t.UTC()}
 			insert := &common.Entries{DataStruct: e,
 				Fields: []string{"*"}}
-			m := x[""].(map[string]interface{})
-			e.PowerCurr = int64(m["Power_curr"].(float64))
-			e.Total = m["total_in"].(float64)
+			m := x["eHZ"].(map[string]interface{})
+			e.PowerCurr = int64(m["Power"].(float64))
+			e.Total = m["E_in"].(float64)
 			err = dbid.Insert(tableName, insert)
 			if err != nil {
 				log.Fatal("Error inserting record: ", err)
