@@ -155,6 +155,7 @@ func main() {
 		log.Println(m.Topic, ": Message:", string(m.Payload))
 		x := make(map[string]interface{})
 		fmt.Println("EVENT....")
+		// {"sn":{"Time":"2024-08-01T22:14:45","eHZ":{"E_in":16585.289,"E_out":0.000,"Power":326}},"ver":1}
 		err := json.Unmarshal(m.Payload, &x)
 		if err != nil {
 			fmt.Println("JSON unmarshal fails:", err)
@@ -168,9 +169,9 @@ func main() {
 			e := &event{Time: t}
 			insert := &common.Entries{DataStruct: e,
 				Fields: []string{"*"}}
-			m := x[""].(map[string]interface{})
-			e.PowerCurr = int64(m["Power_curr"].(float64))
-			e.Total = m["total_in"].(float64)
+			m := x["eHZ"].(map[string]interface{})
+			e.PowerCurr = int64(m["Power"].(float64))
+			e.Total = m["E_in"].(float64)
 			err = dbid.Insert(tableName, insert)
 			if err != nil {
 				log.Fatal("Error inserting record", err)
