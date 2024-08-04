@@ -235,6 +235,7 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 		err := json.Unmarshal(m.Payload, &x)
 		if err != nil {
 			fmt.Println("JSON unmarshal fails:", err)
+			continue
 		}
 		// parse in location for local TZ
 		t, err := time.ParseInLocation(layout, x["Time"].(string), time.Local)
@@ -243,16 +244,31 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 			e := &event{Time: t.UTC()}
 			insert := &common.Entries{DataStruct: e,
 				Fields: []string{"*"}}
-			m := x["eHZ"].(map[string]interface{})
-			e.PowerCurr = int64(m["Power"].(float64))
-			e.Total = m["E_in"].(float64)
-			err = dbid.Insert(tableName, insert)
+			var o interface{}
+			var ok bool
+			if o, ok = x["eHZ"]; !ok {
+				fmt.Println("Error search 'eHZ'")
+				continue
+			}
+
+			m := o.(map[string]interface{})
+			if o, ok = m["Power"]; !ok {
+				fmt.Println("Error search 'Power'")
+				continue
+			}
+			e.PowerCurr = int64(o.(float64))
+			if o, ok = m["E_in"]; !ok {
+				fmt.Println("Error search 'E_in'")
+				return
+			}
+			e.Total = o.(float64)
+			_, err = dbid.Insert(tableName, insert)
 			if err != nil {
 				log.Fatal("Error inserting record: ", err)
 			}
-			fmt.Printf("%04d ", counter)
-			if counter%30 == 0 {
-				fmt.Println()
+			fmt.Printf("Received: %04d\r", counter)
+			if counter%100 == 0 {
+				fmt.Println(" ", time.Now())
 			}
 			os.Stdout.Sync()
 		}
