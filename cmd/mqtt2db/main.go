@@ -38,6 +38,7 @@ type event struct {
 	Time      time.Time `json:"Time"`
 	Total     float64   `json:"total_in"`
 	PowerCurr int64     `json:"Power_curr"`
+	PowerOut  int64     `json:"Powerout"`
 }
 
 var dbid common.RegDbID
@@ -258,6 +259,11 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 			}
 			e.PowerCurr = int64(o.(float64))
 			if o, ok = m["E_in"]; !ok {
+				fmt.Println("Error search 'E_in'")
+				return
+			}
+			e.Total = o.(float64)
+			if o, ok = m["E_out"]; !ok {
 				fmt.Println("Error search 'E_in'")
 				return
 			}
