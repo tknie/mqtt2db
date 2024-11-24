@@ -116,6 +116,7 @@ func main() {
 	var clientid string
 	username := ""
 	password := ""
+	create := false
 
 	flag.StringVar(&server, "server", "", "The MQTT server to connect to ex: 127.0.0.1:1883")
 	flag.StringVar(&topic, "topic", "", "Topic to subscribe to")
@@ -123,6 +124,7 @@ func main() {
 	flag.StringVar(&clientid, "clientid", "", "A clientid for the connection")
 	flag.StringVar(&username, "username", "", "A username to authenticate to the MQTT server")
 	flag.StringVar(&password, "password", "", "Password to match username")
+	flag.BoolVar(&create, "create", false, "Create new database")
 	flag.Parse()
 
 	if topic == "" {
@@ -145,7 +147,7 @@ func main() {
 	services.ServerMessage("MQTT topic: %s", topic)
 	services.ServerMessage("MQTT username: %s", username)
 
-	initDatabase()
+	initDatabase(create)
 	defer close()
 
 	logger := &logger{}
@@ -287,7 +289,7 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 //   - create function for updating inserted_on the current
 //     timestamp
 //   - add id serial
-func initDatabase() {
+func initDatabase(create bool) {
 	url := os.Getenv("MQTT_STORE_URL")
 	if url == "" || tableName == "" {
 		log.Fatal("Table parameter not defined...")
@@ -315,25 +317,27 @@ func initDatabase() {
 		count++
 		tlog.Log.Debugf("Try count=%d", count)
 
-		// create table if not exists
-		status, err = id.CreateTableIfNotExists(tableName, &event{})
-		if err != nil {
-			if count < 10 {
-				services.ServerMessage("Wait because of creation err %T: %v", status, err)
-				time.Sleep(10 * time.Second)
-				services.ServerMessage("Skipt counter increased to %d", count)
-				continue
-			} else {
-				log.Fatalf("Database log creating failed: %v %T", err, status)
+		if create {
+			// create table if not exists
+			status, err = id.CreateTableIfNotExists(tableName, &event{})
+			if err != nil {
+				if count < 10 {
+					services.ServerMessage("Wait because of creation err %T: %v", status, err)
+					time.Sleep(10 * time.Second)
+					services.ServerMessage("Skipt counter increased to %d", count)
+					continue
+				} else {
+					log.Fatalf("Database log creating failed: %v %T", err, status)
+				}
 			}
-		}
-		tlog.Log.Debugf("Received status=%v", status)
-		// if database is created, then call batch commands
-		if status == common.CreateCreated {
-			for i, batch := range SQLbatches {
-				err = id.Batch(batch)
-				if err != nil {
-					log.Fatalf("Database batch(%03d) failed: %v", i, err)
+			tlog.Log.Debugf("Received status=%v", status)
+			// if database is created, then call batch commands
+			if status == common.CreateCreated {
+				for i, batch := range SQLbatches {
+					err = id.Batch(batch)
+					if err != nil {
+						log.Fatalf("Database batch(%03d) failed: %v", i, err)
+					}
 				}
 			}
 		}
@@ -344,7 +348,7 @@ func initDatabase() {
 		if err != nil {
 			services.ServerMessage("Pinging failed: %v", err)
 			time.Sleep(10 * time.Second)
-			services.ServerMessage("Skipt counter increased to %d", count)
+			services.ServerMessage("Skip counter increased to %d", count)
 		}
 		tlog.Log.Debugf("End error=%v", err)
 	}
@@ -368,6 +372,7 @@ func (l *logger) Println(v ...interface{}) {
 	s += "\n"
 	tlog.Log.Debugf(s, v...)
 }
+
 func (l *logger) Printf(format string, v ...interface{}) {
 	tlog.Log.Debugf(format, v...)
 }
