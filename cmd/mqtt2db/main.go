@@ -160,8 +160,8 @@ func main() {
 		log.Fatalf("Failed to dial to %s: %s", server, err)
 	}
 
-	c := paho.NewClient(paho.ClientConfig{PacketTimeout: time.Duration(2 * time.Minute),
-		Router: paho.NewSingleHandlerRouter(func(m *paho.Publish) {
+	c := paho.NewClient(paho.ClientConfig{PacketTimeout: 2 * time.Minute,
+		Router: paho.NewStandardRouterWithDefault(func(m *paho.Publish) {
 			msgChan <- m
 		}),
 		Conn: conn,
