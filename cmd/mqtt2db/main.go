@@ -153,9 +153,10 @@ func main() {
 	logger := &logger{}
 	msgChan := make(chan *paho.Publish)
 
-	services.ServerMessage("Connecting ... %s", server)
+	services.ServerMessage("Connect TCP/IP to %s", server)
 	conn, err := net.Dial("tcp", server)
 	if err != nil {
+		services.ServerMessage("Error connecting MQTT ... %v", err)
 		log.Fatalf("Failed to dial to %s: %s", server, err)
 	}
 
@@ -168,7 +169,7 @@ func main() {
 	c.SetDebugLogger(logger)
 	c.SetErrorLogger(logger)
 
-	services.ServerMessage("Connecting paho")
+	services.ServerMessage("Connecting paho services")
 
 	// connect to MQTT and listen and subscribe
 	cp := &paho.Connect{
@@ -217,6 +218,7 @@ func main() {
 		Subscriptions: subscriptions,
 	})
 	if err != nil {
+		services.ServerMessage("Error subscribing MQTT ... %v", err)
 		log.Fatalln(err)
 	}
 	if sa.Reasons[0] != byte(qos) {
@@ -349,6 +351,8 @@ func initDatabase(create bool) {
 			services.ServerMessage("Pinging failed: %v", err)
 			time.Sleep(10 * time.Second)
 			services.ServerMessage("Skip counter increased to %d", count)
+		} else {
+			services.ServerMessage("Pinging successfullly done")
 		}
 		tlog.Log.Debugf("End error=%v", err)
 	}
