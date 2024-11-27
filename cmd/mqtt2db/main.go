@@ -212,7 +212,8 @@ func main() {
 
 	// subscribe to a subscription MQTT topic
 	subscriptions := make([]paho.SubscribeOptions, 0)
-	subscriptions = append(subscriptions, paho.SubscribeOptions{QoS: byte(qos)})
+	subscriptions = append(subscriptions, paho.SubscribeOptions{Topic: topic,
+		QoS: byte(qos)})
 
 	sa, err := c.Subscribe(context.Background(), &paho.Subscribe{
 		Subscriptions: subscriptions,
