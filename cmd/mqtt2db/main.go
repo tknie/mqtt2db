@@ -38,7 +38,7 @@ type event struct {
 	Time      time.Time `json:"Time"`
 	Total     float64   `json:"total_in"`
 	PowerCurr int64     `json:"Power_curr"`
-	PowerOut  int64     `json:"Powerout"`
+	PowerOut  float64   `json:"Powerout"`
 }
 
 var dbid common.RegDbID
@@ -272,7 +272,8 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 				fmt.Println("Error search 'E_in'")
 				return
 			}
-			e.Total = o.(float64)
+			e.PowerOut = o.(float64)
+			insert.Values = [][]any{{e}}
 			_, err = dbid.Insert(tableName, insert)
 			if err != nil {
 				log.Fatal("Error inserting record: ", err)
