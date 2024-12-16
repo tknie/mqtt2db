@@ -34,6 +34,8 @@ import (
 
 const layout = "2006-01-02T15:04:05"
 
+const defaultMaxTries = 10
+
 type event struct {
 	Time      time.Time `json:"Time"`
 	Total     float64   `json:"total_in"`
@@ -117,10 +119,12 @@ func main() {
 	username := ""
 	password := ""
 	create := false
+	maxTries := defaultMaxTries
 
 	flag.StringVar(&server, "server", "", "The MQTT server to connect to ex: 127.0.0.1:1883")
 	flag.StringVar(&topic, "topic", "", "Topic to subscribe to")
 	flag.IntVar(&qos, "qos", 0, "The QoS to subscribe to messages at")
+	flag.IntVar(&maxTries, "maxtries", defaultMaxTries, "The QoS to subscribe to messages at")
 	flag.StringVar(&clientid, "clientid", "", "A clientid for the connection")
 	flag.StringVar(&username, "username", "", "A username to authenticate to the MQTT server")
 	flag.StringVar(&password, "password", "", "Password to match username")
@@ -154,11 +158,7 @@ func main() {
 	msgChan := make(chan *paho.Publish)
 
 	services.ServerMessage("Connect TCP/IP to %s", server)
-	conn, err := net.Dial("tcp", server)
-	if err != nil {
-		services.ServerMessage("Error connecting MQTT ... %v", err)
-		log.Fatalf("Failed to dial to %s: %s", server, err)
-	}
+	conn := tryConnectMQTT(server, maxTries)
 
 	c := paho.NewClient(paho.ClientConfig{PacketTimeout: 2 * time.Minute,
 		Router: paho.NewStandardRouterWithDefault(func(m *paho.Publish) {
@@ -285,6 +285,26 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 			os.Stdout.Sync()
 		}
 	}
+}
+
+func tryConnectMQTT(server string, tries int) net.Conn {
+	var err error
+	var conn net.Conn
+	for count := 0; count < tries; count++ {
+		conn, err = net.Dial("tcp", server)
+		if err == nil {
+			return conn
+		}
+		if count < tries {
+			services.ServerMessage("Error connecting MQTT retrying soon ... %v", err)
+		} else {
+			services.ServerMessage("Error connecting MQTT ... %v", err)
+		}
+	}
+	if err != nil {
+		log.Fatalf("Failed to dial to %s: %s", server, err)
+	}
+	return nil
 }
 
 // initDatabase initialize database by
