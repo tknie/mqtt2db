@@ -8,7 +8,7 @@ require (
 	github.com/eclipse/paho.golang v0.22.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/tknie/flynn v0.0.0-20241208122233-68c9d1ab4c44
-	github.com/tknie/log v0.0.0-20241117202403-65556e62b83d
+	github.com/tknie/log v0.1.0
 	github.com/tknie/services v0.0.0-20241125180359-e6741d6de79d
 )
 
