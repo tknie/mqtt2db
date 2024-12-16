@@ -8,8 +8,8 @@ require (
 	github.com/eclipse/paho.golang v0.22.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/tknie/flynn v0.0.0-20241208122233-68c9d1ab4c44
-	github.com/tknie/log v0.0.0-20241117202403-65556e62b83d
-	github.com/tknie/services v0.0.0-20241125180359-e6741d6de79d
+	github.com/tknie/log v0.1.0
+	github.com/tknie/services v0.1.0
 )
 
 require (
@@ -26,7 +26,7 @@ require (
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.0 // indirect
 	github.com/tknie/adabas-go-api v1.7.11-0.20230927173718-c1f8db24a2a8 // indirect
-	github.com/tknie/errorrepo v0.0.0-20240912184714-682ebdc389d9 // indirect
+	github.com/tknie/errorrepo v0.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.30.0 // indirect
