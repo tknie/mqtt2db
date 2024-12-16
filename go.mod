@@ -7,8 +7,8 @@ toolchain go1.23.2
 require (
 	github.com/eclipse/paho.golang v0.22.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/tknie/flynn v0.0.0-20241208122233-68c9d1ab4c44
-	github.com/tknie/log v0.0.0-20241117202403-65556e62b83d
+	github.com/tknie/flynn v0.6.0
+	github.com/tknie/log v0.1.0
 	github.com/tknie/services v0.0.0-20241125180359-e6741d6de79d
 )
 
@@ -25,12 +25,12 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.0 // indirect
-	github.com/tknie/adabas-go-api v1.7.11-0.20230927173718-c1f8db24a2a8 // indirect
-	github.com/tknie/errorrepo v0.0.0-20240912184714-682ebdc389d9 // indirect
+	github.com/tknie/adabas-go-api v1.7.11 // indirect
+	github.com/tknie/errorrepo v0.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.30.0 // indirect
-	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d // indirect
+	golang.org/x/exp v0.0.0-20241210172134-14434422244c // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
