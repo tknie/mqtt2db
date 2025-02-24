@@ -9,7 +9,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/tknie/flynn v0.9.0
 	github.com/tknie/log v0.1.0
-	github.com/tknie/services v0.2.0
+	github.com/tknie/services v0.3.0
 )
 
 require (
