@@ -282,9 +282,8 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 			if err != nil {
 				log.Fatal("Error inserting record: ", err)
 			}
-			fmt.Printf("Received: %04d\r", counter)
-			if counter%100 == 0 {
-				fmt.Println(" ", time.Now())
+			if counter%350 == 0 {
+				fmt.Printf("Received: %04d ->  %v\n", counter, time.Now())
 			}
 			os.Stdout.Sync()
 		}
@@ -301,6 +300,7 @@ func tryConnectMQTT(server string, tries int) net.Conn {
 		}
 		if count < tries {
 			services.ServerMessage("Error connecting MQTT retrying soon ... %v", err)
+			time.Sleep(10 * time.Second)
 		} else {
 			services.ServerMessage("Error connecting MQTT ... %v", err)
 		}
@@ -341,7 +341,7 @@ func initDatabase(create bool) {
 	}
 	var status common.CreateStatus
 	count := 0
-	for err == nil && count < 10 {
+	for err == nil && count < defaultMaxTries {
 		count++
 		tlog.Log.Debugf("Try count=%d", count)
 
