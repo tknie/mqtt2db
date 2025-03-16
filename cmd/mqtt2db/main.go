@@ -273,6 +273,10 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 				return
 			}
 			e.PowerOut = o.(float64)
+			if e.PowerCurr < 0 && e.PowerOut == 0 {
+				e.PowerOut = float64(-e.PowerCurr)
+				e.PowerCurr = 0
+			}
 			insert.Values = [][]any{{e}}
 			_, err = dbid.Insert(tableName, insert)
 			if err != nil {
