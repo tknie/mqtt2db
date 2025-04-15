@@ -341,7 +341,7 @@ func initDatabase(create bool) {
 	}
 	var status common.CreateStatus
 	count := 0
-	for err == nil && count < defaultMaxTries {
+	for count < defaultMaxTries {
 		count++
 		tlog.Log.Debugf("Try count=%d", count)
 
@@ -374,11 +374,12 @@ func initDatabase(create bool) {
 		// final ping checks if database is online
 		err = id.Ping()
 		if err != nil {
-			services.ServerMessage("Pinging failed: %v", err)
+			services.ServerMessage("%d. Pinging failed: %v", count, err)
 			time.Sleep(10 * time.Second)
 			services.ServerMessage("Skip counter increased to %d", count)
 		} else {
 			services.ServerMessage("Pinging successfullly done")
+			break
 		}
 		tlog.Log.Debugf("End error=%v", err)
 	}
