@@ -1,6 +1,6 @@
-FROM ubuntu:latest
+FROM alpine:latest
 
-RUN  apt-get update && apt-get -y upgrade
+RUN  apk update && apk upgrade && apk add gcompat
 
 COPY mqtt2db /mqtt2db/bin/
 COPY docker-entrypoint.sh /

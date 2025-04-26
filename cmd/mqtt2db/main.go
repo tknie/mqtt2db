@@ -32,9 +32,17 @@ import (
 	"github.com/tknie/services"
 )
 
+// BuildDate build date
+var BuildDate string
+
+// BuildVersion build version
+var BuildVersion string
+
 const layout = "2006-01-02T15:04:05"
 
 const defaultMaxTries = 10
+
+var maxTries = defaultMaxTries
 
 type event struct {
 	Time      time.Time `json:"Time"`
@@ -70,12 +78,13 @@ var SQLbatches = []string{
 	`ALTER TABLE public.home ADD id serial4 NOT NULL;`}
 
 func init() {
+	services.ServerMessage("MQTT2DB version %s (build at %s)", BuildVersion, BuildDate)
+
 	tableName = os.Getenv("MQTT_STORE_TABLENAME")
 	startLog()
 }
 
 func startLog() {
-	services.ServerMessage("Init logging")
 	fileName := "mqtt2db.trace.log"
 	level := os.Getenv("ENABLE_MQTT2DB_DEBUG")
 	logLevel := logrus.WarnLevel
@@ -119,7 +128,6 @@ func main() {
 	username := ""
 	password := ""
 	create := false
-	maxTries := defaultMaxTries
 
 	flag.StringVar(&server, "server", "", "The MQTT server to connect to ex: 127.0.0.1:1883")
 	flag.StringVar(&topic, "topic", "", "Topic to subscribe to")
@@ -283,7 +291,7 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 				log.Fatal("Error inserting record: ", err)
 			}
 			if counter%350 == 0 {
-				fmt.Printf("Received: %04d ->  %v\n", counter, time.Now())
+				services.ServerMessage("Received: %04d ->  %v", counter, time.Now())
 			}
 			os.Stdout.Sync()
 		}
@@ -341,7 +349,7 @@ func initDatabase(create bool) {
 	}
 	var status common.CreateStatus
 	count := 0
-	for count < defaultMaxTries {
+	for count < maxTries {
 		count++
 		tlog.Log.Debugf("Try count=%d", count)
 
@@ -379,12 +387,12 @@ func initDatabase(create bool) {
 			services.ServerMessage("Skip counter increased to %d", count)
 		} else {
 			services.ServerMessage("Pinging successfullly done")
-			break
+			services.ServerMessage("Database initiated")
+			return
 		}
 		tlog.Log.Debugf("End error=%v", err)
 	}
 
-	services.ServerMessage("Database initiated")
 }
 
 // close close and unregister flynn identifier

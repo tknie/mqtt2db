@@ -1,2 +1,4 @@
 logs/
 mqtt
+mqtt2db
+.DS_Store
