@@ -105,9 +105,9 @@ In Grafana accessing the data source containing the data received by two input s
 
 Both data are containing a wide range of statistic data which can be presented inside an Grafana Dashboard:
 
-![Grafana Dashboard example](images/Grafana-power-Statistics.png)
+![Grafana Dashboard example](images/Grafana-power-statistics.png)
 
-![Grafana Dashboard example](images/Grafana-solar-Statistics.png)
+![Grafana Dashboard example](images/Grafana-solar-statistics.png)
 
 ## Summary
 
