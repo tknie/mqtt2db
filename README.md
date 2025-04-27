@@ -2,6 +2,7 @@
 
 - [Tasmota MQTT store into postgres (draft)](#tasmota-mqtt-store-into-postgres-draft)
   - [Introduction](#introduction)
+  - [Build](#build)
   - [Workflow](#workflow)
   - [Environment in Docker container](#environment-in-docker-container)
   - [Podman start command](#podman-start-command)
@@ -11,6 +12,14 @@
 ## Introduction
 
 This small application named MQTT2DB stores MQTT data received by Tasmota via MQTT server into a postgres database.
+
+## Build
+
+The `mqtt2db` application is written in Golang. The tool can be build with
+
+```sh
+build.sh
+```
 
 ## Workflow
 
