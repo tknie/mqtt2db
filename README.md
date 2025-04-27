@@ -56,6 +56,15 @@ The corresponding Tasmota power level message is configured to send each minute.
 
 ## Podman start command
 
+The Mqtt2db application and corresponding Postgres database is running in an Raspberry Pi.
+
+Docker images are on Docker hub at
+
+```docker
+docker pull thknie/mqtt2db:tagname
+```
+
+See the example script showing how to start the service with podman. Located is the script in this repostiory at [docker/podstart.sh](docker/podstart.sh).
 Corresponding environment variable need to be defined. This script will create a podman pod named `mqtt_pod`.
 
 ```sh

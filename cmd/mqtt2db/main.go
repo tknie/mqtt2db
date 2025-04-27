@@ -42,8 +42,6 @@ const layout = "2006-01-02T15:04:05"
 
 const defaultMaxTries = 10
 
-var maxTries = defaultMaxTries
-
 type event struct {
 	Time      time.Time `json:"Time"`
 	Total     float64   `json:"total_in"`
@@ -78,7 +76,7 @@ var SQLbatches = []string{
 	`ALTER TABLE public.home ADD id serial4 NOT NULL;`}
 
 func init() {
-	services.ServerMessage("MQTT2DB version %s (build at %s)", BuildVersion, BuildDate)
+	services.ServerMessage("Start MQTT2DB application %s (build at %s)", BuildVersion, BuildDate)
 
 	tableName = os.Getenv("MQTT_STORE_TABLENAME")
 	startLog()
@@ -129,6 +127,8 @@ func main() {
 	password := ""
 	create := false
 
+	maxTries := defaultMaxTries
+
 	flag.StringVar(&server, "server", "", "The MQTT server to connect to ex: 127.0.0.1:1883")
 	flag.StringVar(&topic, "topic", "", "Topic to subscribe to")
 	flag.IntVar(&qos, "qos", 0, "The QoS to subscribe to messages at")
@@ -159,7 +159,7 @@ func main() {
 	services.ServerMessage("MQTT topic: %s", topic)
 	services.ServerMessage("MQTT username: %s", username)
 
-	initDatabase(create)
+	initDatabase(create, maxTries)
 	defer close()
 
 	logger := &logger{}
@@ -325,7 +325,7 @@ func tryConnectMQTT(server string, tries int) net.Conn {
 //   - create function for updating inserted_on the current
 //     timestamp
 //   - add id serial
-func initDatabase(create bool) {
+func initDatabase(create bool, tries int) {
 	url := os.Getenv("MQTT_STORE_URL")
 	if url == "" || tableName == "" {
 		log.Fatal("Table parameter not defined...")
@@ -349,7 +349,7 @@ func initDatabase(create bool) {
 	}
 	var status common.CreateStatus
 	count := 0
-	for count < maxTries {
+	for count < tries {
 		count++
 		tlog.Log.Debugf("Try count=%d", count)
 
