@@ -5,6 +5,7 @@
   - [Workflow](#workflow)
   - [Environment in Docker container](#environment-in-docker-container)
   - [Podman start command](#podman-start-command)
+  - [Usage in Grafana](#usage-in-grafana)
   - [Summary](#summary)
 
 ## Introduction
@@ -94,6 +95,19 @@ podman run --name mqtt2db --pod mqtt_pod \
         -e MQTT_TOPIC_PASSWORD=$MQTT_PASSWORD \
         -d github.com/tknie/mqtt2db:latest
 ```
+
+## Usage in Grafana
+
+In Grafana accessing the data source containing the data received by two input sources
+
+- First sources comes from [mqtt2db](https://github.com/tknie/mqtt2db). This tool receives Tasmota electric meter data using an Mosquitto MQTT server and store it in database
+- Second sources comes from [ecoflow2db](https://github.com/tknie/ecoflow2db) using the Ecoflow API receiving Solar panel and inverter statistics and store it in the same database
+
+Both data are containing a wide range of statistic data which can be presented inside an Grafana Dashboard:
+
+![Grafana Dashboard example](images/Grafana-power-Statistics.png)
+
+![Grafana Dashboard example](images/Grafana-solar-Statistics.png)
 
 ## Summary
 
