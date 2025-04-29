@@ -258,6 +258,10 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 			e := &event{Time: t.UTC()}
 			insert := &common.Entries{DataStruct: e,
 				Fields: []string{"*"}}
+
+			// Below is the corresponding structure transfered into the structure
+			// Parsing into structure fails because of different topics
+			// Please adapt the x[] map reference if structure differs
 			var o interface{}
 			var ok bool
 			if o, ok = x["eHZ"]; !ok {

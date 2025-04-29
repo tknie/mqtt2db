@@ -1,6 +1,6 @@
-# Tasmota MQTT store into postgres (draft)
+# Mqtt2db application
 
-- [Tasmota MQTT store into postgres (draft)](#tasmota-mqtt-store-into-postgres-draft)
+- [Mqtt2db application](#mqtt2db-application)
   - [Introduction](#introduction)
   - [Build](#build)
   - [Workflow](#workflow)
@@ -11,7 +11,7 @@
 
 ## Introduction
 
-This small application named MQTT2DB stores MQTT data received by Tasmota via MQTT server into a postgres database.
+This `mqtt2db` application stores data events received from MQTT. The MQTT data is collected by an Tasmota smart meter reader. The Tasmota module sends the received smart meter data to an Mosquitto MQTT server. This MQTT events are stored into a postgres database by `mqtt2db`.
 
 ## Build
 
@@ -28,22 +28,25 @@ Inside MQTT the corresponding MQTT message need to be predefined like this:
 ```json
 {
    "Time": "2023-09-02T21:43:20",
-   "":{
-      "total_in": 23446.07,
-      "Power_curr": 372
+   "eHZ":{
+      "E_in": 23446.07,
+      "Power": 372,
+      "E_out": 123,
    }
 }
 ```
 
-During startup phase of the MQTT2DB application
+The structure is defined in an historical matter and can be adapted to the environment and Tasmota script definitions.
+
+During startup phase of the `mqtt2db` application
 
 - if not exists, create the database table is created with an id and corresponding MQTT data fields
 - create an trigger and function creating the current timestamp into the record field "inserted_on"
 - create an ascending and descending index of "inserted_on"
 
-MQTT2DB creates a connection to an postgres database and an Mosquitto MQTT server listening on the given topic.
+`mqtt2db` creates a connection to an postgres database and an Mosquitto MQTT server listening on the given topic.
 
-When MQTT2DB has received a message then the message will be inserted into postgres.
+When `mqtt2db` has received a message then the message will be inserted into postgres.
 The interval for each event entry will be defined by Tasmota MQTT configuration.
 
 ## Environment in Docker container
@@ -52,14 +55,14 @@ I manage to run the overall application
 
 - Mosquitto
 - Postgres
-- MQTT2DB
+- `mqtt2db`
 - Grafana
 
 all are running in a Docker container or Podman pod.
 
-![MQTT2DB Diagramm](files/DiagrammMQTT2DB.png)
+![`mqtt2db` Diagramm](files/DiagrammMQTT2DB.png)
 
-Tasmota server is sending the MQTT messages to my MQTT Mosquitto server. Here it is optional to listen with other application to that MQTT messages. My MQTT2DB application listen to the messages and writes all into the Postgres database.
+Tasmota server is sending the MQTT messages to my MQTT Mosquitto server. Here it is optional to listen with other application to that MQTT messages. My `mqtt2db` application listen to the messages and writes all into the Postgres database.
 With minimal afford the destination database may be another MariaDB or even Adabas databases.
 
 The corresponding Tasmota power level message is configured to send each minute.
@@ -120,7 +123,7 @@ Both data are containing a wide range of statistic data which can be presented i
 
 ## Summary
 
-The MQTT2DB offers easy store of MQTT power messages to store into Postgres. It may be help for developers to work with similar approaches storing MQTT data into databases.
+The `mqtt2db` offers easy store of MQTT power messages to store into Postgres. It may be help for developers to work with similar approaches storing MQTT data into databases.
 
 ______________________
 These tools are provided as-is and without warranty or support. Users are free to use, fork and modify them, subject to the license agreement. 
