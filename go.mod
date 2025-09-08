@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.5
 
 require (
-	github.com/eclipse/paho.golang v0.22.0
+	github.com/eclipse/paho.golang v0.23.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/tknie/flynn v0.9.9
 	github.com/tknie/log v0.1.0
@@ -25,7 +25,6 @@ require (
 	github.com/jackc/pgx/v5 v5.7.5 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
-	github.com/planetscale/vtprotobuf v0.6.0 // indirect
 	github.com/tknie/adabas-go-api v1.7.12 // indirect
 	github.com/tknie/errorrepo v0.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
