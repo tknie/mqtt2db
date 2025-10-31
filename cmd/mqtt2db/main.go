@@ -33,18 +33,35 @@ func init() {
 }
 
 func main() {
+	sync := false
 	config := mqtt2db.Config{}
-	flag.StringVar(&config.Server, "server", "", "The MQTT server to connect to ex: 127.0.0.1:1883")
-	flag.StringVar(&config.Topic, "topic", "", "Topic to subscribe to")
+	username := ""
+	password := ""
+
 	flag.IntVar(&config.Qos, "qos", 0, "The QoS to subscribe to messages at")
 	flag.IntVar(&config.MaxTries, "maxtries", defaultMaxTries, "The QoS to subscribe to messages at")
 	flag.StringVar(&config.Clientid, "clientid", "", "A clientid for the connection")
-	flag.StringVar(&config.Username, "username", "", "A username to authenticate to the MQTT server")
-	flag.StringVar(&config.Password, "password", "", "Password to match username")
+	flag.StringVar(&username, "username", "", "A username to authenticate to the MQTT server")
+	flag.StringVar(&password, "password", "", "Password to match username")
+	flag.StringVar(&config.MapFile, "m", "", "Define event mapping file")
 	flag.BoolVar(&config.Create, "create", false, "Create new database")
+	flag.BoolVar(&sync, "s", false, "Sync to new database")
+	flag.BoolVar(&mqtt2db.CloseIfStuck, "T", false, "Close if in received MQTT loop no messages received")
+	flag.IntVar(&mqtt2db.OutLoopSeconds, "rm", mqtt2db.DefaultLoopSeconds, "Output Received MQTT loop and check cancel")
+
 	flag.Parse()
 
-	config.LoadDefaults()
+	if sync {
+		services.ServerMessage("Synchronize databases...")
+		mqtt2db.SyncDatabase()
+		return
+	}
+
+	if config.MapFile != "" {
+		mqtt2db.InitMapping(config.MapFile)
+	}
+
+	config.LoadDefaults(username, password)
 
 	mqtt2db.InitDatabase(config.Create, config.MaxTries)
 	defer mqtt2db.Close()

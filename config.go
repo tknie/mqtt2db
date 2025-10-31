@@ -18,36 +18,40 @@ import (
 )
 
 type Config struct {
-	Server   string
-	Topic    string
-	Qos      int
-	Clientid string
-	Username string
-	Password string
-	Create   bool
-
-	MaxTries int
+	Qos        int
+	Clientid   string
+	MapFile    string
+	Create     bool
+	TrackInput int
+	MaxTries   int
 }
 
-func (config *Config) LoadDefaults() {
-	if config.Topic == "" {
-		config.Topic = os.Getenv("MQTT_TOPIC")
+func (config *Config) LoadDefaults(username, password string) {
+	if c.Mqtt.Topic == "" {
+		c.Mqtt.Topic = os.Getenv("MQTT_TOPIC")
 	}
-	if config.Topic == "" {
-		config.Topic = "#"
+	if c.Mqtt.Topic == "" {
+		c.Mqtt.Topic = "#"
 	}
-	if config.Server == "" {
-		config.Server = os.Getenv("MQTT_TOPIC_URL")
+	if c.Mqtt.Server == "" {
+		c.Mqtt.Server = os.Getenv("MQTT_TOPIC_URL")
 	}
-	if config.Username == "" {
-		config.Username = os.Getenv("MQTT_TOPIC_USERNAME")
+	if username != "" {
+		c.Mqtt.Username = username
+	} else if c.Mqtt.Username == "" {
+		c.Mqtt.Username = os.Getenv("MQTT_TOPIC_USERNAME")
 	}
-	if config.Password == "" {
-		config.Password = os.Getenv("MQTT_TOPIC_PASSWORD")
+	if password != "" {
+		c.Mqtt.Password = password
+	} else if c.Mqtt.Password == "" {
+		c.Mqtt.Password = os.Getenv("MQTT_TOPIC_PASSWORD")
+	}
+	if c.Database.StoreTablename == "" {
+		c.Database.StoreTablename = os.Getenv("MQTT_STORE_TABLENAME")
 	}
 
-	services.ServerMessage("MQTT server: %s", config.Server)
-	services.ServerMessage("MQTT topic: %s", config.Topic)
-	services.ServerMessage("MQTT username: %s", config.Username)
+	services.ServerMessage("MQTT server: %s", c.Mqtt.Server)
+	services.ServerMessage("MQTT topic: %s", c.Mqtt.Topic)
+	services.ServerMessage("MQTT username: %s", c.Mqtt.Username)
 
 }

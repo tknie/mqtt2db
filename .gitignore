@@ -2,3 +2,5 @@ logs/
 mqtt
 docker/mqtt2db
 .DS_Store
+mapping.yaml
+run.sh

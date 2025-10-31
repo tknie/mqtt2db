@@ -1,0 +1,26 @@
+database:
+  url: <database URL>
+  storeTablename: <database table name>
+mqtt:
+  server: <mqtt server host:1883>
+  topic: <mqtt topic>
+  username: <mqtt user name [optional]>
+  password: <mqtt password [optional]>
+mapping:
+  - source: <Name in MQTT event>
+    destination: <Name in Database>
+    type: <type in database>
+  - source: Time
+    destination: Time
+    type: time.Time
+  - source: eHZ/Power
+    destination: PowerCurr
+    onlyPositive: true
+    type: int64
+  - source: eHZ/E_in
+    destination: Total
+    type: float64
+  - source: eHZ/E_out
+    destination: PowerOut
+    negativeReference: eHZ/Power
+    type: float64

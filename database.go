@@ -12,8 +12,10 @@
 package mqtt2db
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/tknie/flynn"
@@ -45,10 +47,15 @@ var SQLbatches = []string{
 	`ALTER TABLE public.home ADD id serial4 NOT NULL;`}
 
 var dbid common.RegDbID
-var tableName string
 
-func init() {
-	tableName = os.Getenv("MQTT_STORE_TABLENAME")
+type data struct {
+	timeRow     time.Time
+	insertedRow time.Time
+	id          int32
+}
+
+func (d *data) String() string {
+	return fmt.Sprintf("[%d:%v/%v]", d.id, d.timeRow.UTC().Format(layout), d.insertedRow.UTC().Format(layout))
 }
 
 // InitDatabase initialize database by
@@ -58,23 +65,14 @@ func init() {
 //     timestamp
 //   - add id serial
 func InitDatabase(create bool, tries int) {
-	url := os.Getenv("MQTT_STORE_URL")
-	if url == "" || tableName == "" {
-		log.Fatal("Table parameter not defined...")
-	}
-	dbRef, password, err := common.NewReference(url)
-	if err != nil {
-		log.Fatal("REST audit URL incorrect: " + url)
-	}
-	if password == "" {
-		password = os.Getenv("MQTT_STORE_PASS")
-	}
-	dbRef.User = os.Getenv("MQTT_STORE_USER")
-	if dbRef.User == "" {
-		dbRef.User = "admin"
+
+	dbRef, password := getUrl()
+	if c.Database.StoreTablename == "" {
+		services.ServerMessage("Database table not defined to store MQTT data")
+		os.Exit(10)
 	}
 
-	services.ServerMessage("Storage of MQTT data to table '%s'", tableName)
+	services.ServerMessage("Storage of MQTT data to table '%s'", c.Database.StoreTablename)
 	id, err := flynn.Handler(dbRef, password)
 	if err != nil {
 		services.ServerMessage("Register error log: %v", err)
@@ -88,7 +86,7 @@ func InitDatabase(create bool, tries int) {
 
 		if create {
 			// create table if not exists
-			status, err = id.CreateTableIfNotExists(tableName, &event{})
+			status, err = id.CreateTableIfNotExists(c.Database.StoreTablename, &event{})
 			if err != nil {
 				if count < 10 {
 					services.ServerMessage("Wait because of creation err %T: %v", status, err)
@@ -104,7 +102,8 @@ func InitDatabase(create bool, tries int) {
 			// if database is created, then call batch commands
 			if status == common.CreateCreated {
 				for i, batch := range SQLbatches {
-					err = id.Batch(batch)
+					b := strings.Replace(batch, "public.home", "public."+c.Database.StoreTablename, -1)
+					err = id.Batch(b)
 					if err != nil {
 						log.Fatalf("Database batch(%03d) failed: %v", i, err)
 					}
@@ -143,9 +142,121 @@ func storeEvent(e map[string]interface{}) {
 	insert := &common.Entries{Fields: keys,
 		Update: keys,
 		Values: list}
-	_, err := dbid.Insert(tableName, insert)
+	_, err := dbid.Insert(c.Database.StoreTablename, insert)
 	if err != nil {
 		log.Fatal("Error inserting record: ", err)
 	}
 
+}
+
+func SyncDatabase() {
+	dbRef, password := getUrl()
+
+	services.ServerMessage("Synchronize of Home data")
+	sid, err := flynn.Handler(dbRef, password)
+	if err != nil {
+		services.ServerMessage("Register error log: %v", err)
+		log.Fatalf("Register error log: %v", err)
+	}
+
+	url := os.Getenv("MQTT_DEST_URL")
+	if url == "" {
+		log.Fatal("Destination Table MQTT_DEST_URL parameter not defined...")
+	}
+	dbRef, password, err = common.NewReference(url)
+	if err != nil {
+		log.Fatal("REST audit URL incorrect: " + url)
+	}
+	if password == "" {
+		password = os.Getenv("MQTT_DEST_PASS")
+	}
+	did, err := flynn.Handler(dbRef, password)
+	if err != nil {
+		services.ServerMessage("Register error log: %v", err)
+		log.Fatalf("Register error log: %v", err)
+	}
+	schan := make(chan *data)
+	dchan := make(chan *data)
+	go query(sid, schan)
+	go query(did, dchan)
+
+	stime := <-schan
+	dtime := <-dchan
+	counter := uint64(0)
+	direction := 0
+	rowrepeat := 25
+	for {
+		diff := stime.insertedRow.Sub(dtime.insertedRow)
+		// fmt.Println(diff)
+		counter++
+		switch {
+		case diff < time.Duration(1*time.Minute):
+			// fmt.Printf("%03d: %v -> %v -> %v\n", counter, stime, diff, dtime)
+			stime = <-schan
+			dtime = <-dchan
+			direction = 0
+		case stime.insertedRow.Before(dtime.insertedRow):
+			if direction != 1 || rowrepeat < 1 {
+				fmt.Printf("%07d: Source: %12v -> %v -> Target: %v\n", counter, stime, diff, dtime)
+				direction = 1
+				rowrepeat = 25
+			} else {
+				fmt.Printf("%07d:                 -> %v -> Target: %v\n", counter, diff, dtime)
+				rowrepeat--
+			}
+			dtime = <-dchan
+		case stime.insertedRow.After(dtime.insertedRow):
+			if direction != 2 || rowrepeat < 1 {
+				fmt.Printf("%07d: Source: %12v -> %v -> Target: %v %0000d\n", counter, stime, diff, dtime, direction)
+				direction = 2
+				rowrepeat = 25
+			} else {
+				fmt.Printf("%07d: Source: %v -> %v -> \n", counter, dtime, diff)
+				rowrepeat--
+			}
+			stime = <-schan
+		}
+		if stime == nil && dtime == nil {
+			return
+		}
+		if stime == nil {
+			fmt.Println("Source rest")
+			for {
+				q := <-dchan
+				if q == nil {
+					break
+				}
+				fmt.Printf("%03d:                 -> %v -> Target: %v\n", counter, diff, dtime)
+				counter++
+			}
+			fmt.Println("Source ended")
+			return
+		}
+		if dtime == nil {
+			fmt.Println("Destination rest")
+			for {
+				q := <-schan
+				if q == nil {
+					break
+				}
+				fmt.Printf("%03d: Source: %v -> %v -> \n", counter, dtime, diff)
+				counter++
+			}
+			fmt.Println("Destination ended")
+			return
+		}
+	}
+}
+
+func query(id common.RegDbID, ch chan *data) {
+	query := &common.Query{Search: "SELECT inserted_on, time, id from HOME order by time asc"}
+	err := id.BatchSelectFct(query, func(search *common.Query, result *common.Result) error {
+		ch <- &data{result.Rows[1].(time.Time), result.Rows[0].(time.Time), result.Rows[2].(int32)}
+		return nil
+	})
+	if err != nil {
+		log.Fatal("Error query:", err)
+	}
+	ch <- nil
+	fmt.Println("Query ended...")
 }

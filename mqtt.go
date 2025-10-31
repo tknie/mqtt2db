@@ -36,10 +36,21 @@ type event struct {
 	PowerOut  float64   `json:"Powerout"`
 }
 
+var counter = uint64(0)
+var mqttDone = make(chan bool, 1)
+
+const DefaultLoopSeconds = 120
+
+var OutLoopSeconds = 120
+var CloseIfStuck = false
+
 // loop loop through receiving all messages from MQTT and store them into
 // the database
 func loopIncomingMessages(msgChan chan *paho.Publish) {
-	counter := uint64(0)
+	if OutLoopSeconds == 0 {
+		return
+	}
+	go loopCounterAndCancelOutput()
 	for m := range msgChan {
 		tlog.Log.Debugf("%s: Message: %s", m.Topic, string(m.Payload))
 		x := make(map[string]interface{})
@@ -49,54 +60,35 @@ func loopIncomingMessages(msgChan chan *paho.Publish) {
 			fmt.Println("JSON unmarshal fails:", err)
 			continue
 		}
-		// parse in location for local TZ
-		t, err := time.ParseInLocation(layout, x["Time"].(string), time.Local)
-		if err == nil {
-			counter++
-			em := make(map[string]interface{})
-			em["Time"] = t.UTC()
-			e := &event{Time: t.UTC()}
 
-			// Below is the corresponding structure transfered into the structure
-			// Parsing into structure fails because of different topics
-			// Please adapt the x[] map reference if structure differs
-			var o interface{}
-			var ok bool
-			if o, ok = x["eHZ"]; !ok {
-				fmt.Println("Error search 'eHZ'")
-				continue
-			}
-
-			m := o.(map[string]interface{})
-			if o, ok = m["Power"]; !ok {
-				fmt.Println("Error search 'Power'")
-				continue
-			}
-			em["PowerCurr"] = int64(o.(float64))
-			e.PowerCurr = int64(o.(float64))
-			if o, ok = m["E_in"]; !ok {
-				fmt.Println("Error search 'E_in'")
-				return
-			}
-			e.Total = o.(float64)
-			em["Total"] = o.(float64)
-			if o, ok = m["E_out"]; !ok {
-				fmt.Println("Error search 'E_in'")
-				return
-			}
-			e.PowerOut = o.(float64)
-			em["PowerOut"] = o.(float64)
-			if e.PowerCurr < 0 && e.PowerOut == 0 {
-				e.PowerOut = float64(-e.PowerCurr)
-				e.PowerCurr = 0
-				em["PowerOut"] = float64(-em["PowerCurr"].(int64))
-				em["PowerCurr"] = 0
-			}
+		em := ParseMessage(x)
+		if em != nil {
 			storeEvent(em)
-			if counter%350 == 0 {
-				services.ServerMessage("Received MQTT msgs: %04d ->  %v", counter, time.Now())
-			}
 			os.Stdout.Sync()
+		}
+	}
+}
+
+func loopCounterAndCancelOutput() {
+	lastCounter := uint64(0)
+	try := 0
+	for {
+		select {
+		case <-mqttDone:
+			services.ServerMessage("Ecoflow analyze loop is stopped")
+			return
+		case <-time.After(time.Second * time.Duration(OutLoopSeconds)):
+			services.ServerMessage("Received MQTT msgs: %04d", counter)
+			if counter == lastCounter && CloseIfStuck {
+				if try > 10 {
+					services.ServerMessage("Received MQTT msgs error still stuck")
+					os.Exit(10)
+				}
+				try++
+			} else {
+				try = 0
+			}
+			lastCounter = counter
 		}
 	}
 }
@@ -126,46 +118,52 @@ func (config *Config) ConnectMQTT() {
 	logger := &MQTTWrapperLogger{}
 	msgChan := make(chan *paho.Publish)
 
-	services.ServerMessage("Connect TCP/IP to %s", config.Server)
-	conn := tryConnectMQTT(config.Server, config.MaxTries)
+	services.ServerMessage("Connect TCP/IP to %s", c.Mqtt.Server)
+	conn := tryConnectMQTT(c.Mqtt.Server, config.MaxTries)
 
-	c := paho.NewClient(paho.ClientConfig{PacketTimeout: 2 * time.Minute,
+	pahoClient := paho.NewClient(paho.ClientConfig{PacketTimeout: 2 * time.Minute,
 		Router: paho.NewStandardRouterWithDefault(func(m *paho.Publish) {
 			msgChan <- m
 		}),
 		Conn: conn,
 	})
-	c.SetDebugLogger(logger)
-	c.SetErrorLogger(logger)
+	pahoClient.SetDebugLogger(logger)
+	pahoClient.SetErrorLogger(logger)
 
-	services.ServerMessage("Connecting paho services")
+	services.ServerMessage("Connecting paho services to %s", c.Mqtt.Server)
+	password := os.ExpandEnv(c.Mqtt.Password)
 
 	// connect to MQTT and listen and subscribe
 	cp := &paho.Connect{
 		KeepAlive:  30,
 		ClientID:   config.Clientid,
 		CleanStart: true,
-		Username:   config.Username,
-		Password:   []byte(config.Password),
+		Username:   c.Mqtt.Username,
+		Password:   []byte(password),
 	}
 
-	if config.Username != "" {
+	if c.Mqtt.Username != "" {
 		cp.UsernameFlag = true
 	}
-	if config.Password != "" {
+	if password != "" {
 		cp.PasswordFlag = true
 	}
 
 	// connecting to MQTT server
-	ca, err := c.Connect(context.Background(), cp)
+	ca, err := pahoClient.Connect(context.Background(), cp)
 	if err != nil {
+		services.ServerMessage("Error to connect paho services to %s with %s: %v",
+			c.Mqtt.Server, c.Mqtt.Username, err)
 		log.Fatalln(err)
 	}
 	if ca.ReasonCode != 0 {
-		log.Fatalf("Failed to connect to %s : %d - %s", config.Server, ca.ReasonCode, ca.Properties.ReasonString)
+		services.ServerMessage("Failed to connect paho services to %s with %s with reason code %d",
+			c.Mqtt.Server, c.Mqtt.Username, ca.ReasonCode)
+
+		log.Fatalf("Failed to connect to %s : %d - %s", c.Mqtt.Server, ca.ReasonCode, ca.Properties.ReasonString)
 	}
 
-	services.ServerMessage("Connecting MQTT to %s", config.Server)
+	services.ServerMessage("Connecting MQTT to %s", c.Mqtt.Server)
 
 	ic := make(chan os.Signal, 1)
 	signal.Notify(ic, os.Interrupt, syscall.SIGTERM)
@@ -174,17 +172,17 @@ func (config *Config) ConnectMQTT() {
 		fmt.Println("signal received, exiting")
 		if c != nil {
 			d := &paho.Disconnect{ReasonCode: 0}
-			c.Disconnect(d)
+			pahoClient.Disconnect(d)
 		}
 		os.Exit(0)
 	}()
 
 	// subscribe to a subscription MQTT topic
 	subscriptions := make([]paho.SubscribeOptions, 0)
-	subscriptions = append(subscriptions, paho.SubscribeOptions{Topic: config.Topic,
+	subscriptions = append(subscriptions, paho.SubscribeOptions{Topic: c.Mqtt.Topic,
 		QoS: byte(config.Qos)})
 
-	sa, err := c.Subscribe(context.Background(), &paho.Subscribe{
+	sa, err := pahoClient.Subscribe(context.Background(), &paho.Subscribe{
 		Subscriptions: subscriptions,
 	})
 	if err != nil {
@@ -192,8 +190,8 @@ func (config *Config) ConnectMQTT() {
 		log.Fatalln(err)
 	}
 	if sa.Reasons[0] != byte(config.Qos) {
-		log.Fatalf("Failed to subscribe to %s : %d", config.Topic, sa.Reasons[0])
+		log.Fatalf("Failed to subscribe to %s : %d", c.Mqtt.Topic, sa.Reasons[0])
 	}
-	services.ServerMessage("Subscribed MQTT to %s", config.Topic)
+	services.ServerMessage("Subscribed MQTT to %s", c.Mqtt.Topic)
 	loopIncomingMessages(msgChan)
 }
