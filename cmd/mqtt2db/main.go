@@ -13,6 +13,7 @@ package main
 
 import (
 	"flag"
+	"os"
 
 	"github.com/tknie/mqtt2db"
 	"github.com/tknie/services"
@@ -38,12 +39,14 @@ func main() {
 	username := ""
 	password := ""
 
+	config.MapFile = os.ExpandEnv(os.Getenv("MQTT2DB_MAPFILE"))
+
 	flag.IntVar(&config.Qos, "qos", 0, "The QoS to subscribe to messages at")
 	flag.IntVar(&config.MaxTries, "maxtries", defaultMaxTries, "The QoS to subscribe to messages at")
 	flag.StringVar(&config.Clientid, "clientid", "", "A clientid for the connection")
 	flag.StringVar(&username, "username", "", "A username to authenticate to the MQTT server")
 	flag.StringVar(&password, "password", "", "Password to match username")
-	flag.StringVar(&config.MapFile, "m", "", "Define event mapping file")
+	flag.StringVar(&config.MapFile, "m", config.MapFile, "Define event mapping file")
 	flag.BoolVar(&config.Create, "create", false, "Create new database")
 	flag.BoolVar(&sync, "s", false, "Sync to new database")
 	flag.BoolVar(&mqtt2db.CloseIfStuck, "T", false, "Close if in received MQTT loop no messages received")

@@ -27,7 +27,8 @@ import (
 )
 
 type Database struct {
-	Url            string
+	Url            string `yaml:"url"`
+	Username       string `yaml:"username"`
 	StoreTablename string `yaml:"storeTablename"`
 }
 
@@ -75,6 +76,9 @@ func getUrl() (*common.Reference, string) {
 	}
 	if dbRef.User == "" {
 		dbRef.User = os.Getenv("MQTT_STORE_USER")
+		if dbRef.User == "" {
+			dbRef.User = c.Database.Username
+		}
 	}
 	if dbRef.User == "" {
 		dbRef.User = "admin"
