@@ -54,14 +54,16 @@ func main() {
 
 	flag.Parse()
 
+	if config.MapFile != "" {
+		mqtt2db.InitMapping(config.MapFile)
+	} else {
+		mqtt2db.InitUrl()
+	}
+
 	if sync {
 		services.ServerMessage("Synchronize databases...")
 		mqtt2db.SyncDatabase()
 		return
-	}
-
-	if config.MapFile != "" {
-		mqtt2db.InitMapping(config.MapFile)
 	}
 
 	config.LoadDefaults(username, password)

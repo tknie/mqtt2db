@@ -63,13 +63,13 @@ func InitMapping(mapFile string) {
 	if err != nil {
 		log.Fatalf("Unmarshal: %v", err)
 	}
-	initUrl()
+	InitUrl()
 }
 
 func getUrl() (*common.Reference, string) {
 	dbRef, password, err := common.NewReference(c.Database.Url)
 	if err != nil {
-		log.Fatal("REST audit URL incorrect: " + c.Database.Url)
+		log.Fatal("Database URL incorrect: " + c.Database.Url)
 	}
 	if password == "" {
 		password = os.Getenv("MQTT_STORE_PASS")
@@ -86,7 +86,7 @@ func getUrl() (*common.Reference, string) {
 	return dbRef, password
 }
 
-func initUrl() {
+func InitUrl() {
 	url := os.Getenv("MQTT_STORE_URL")
 	if url == "" {
 		if c.Database.Url == "" {

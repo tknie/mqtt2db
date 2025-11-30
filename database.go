@@ -48,14 +48,17 @@ var SQLbatches = []string{
 
 var dbid common.RegDbID
 
-type data struct {
-	timeRow     time.Time
-	insertedRow time.Time
-	id          int32
+type Home struct {
+	ID          uint64
+	Time        time.Time
+	Total       float64
+	Powercurr   int64
+	Powerout    float64
+	Inserted_on time.Time
 }
 
-func (d *data) String() string {
-	return fmt.Sprintf("[%d:%v/%v]", d.id, d.timeRow.UTC().Format(layout), d.insertedRow.UTC().Format(layout))
+func (d *Home) String() string {
+	return fmt.Sprintf("[%d:%v/%v]", d.ID, d.Time.UTC().Format(layout), d.Inserted_on.UTC().Format(layout))
 }
 
 // InitDatabase initialize database by
@@ -159,13 +162,19 @@ func SyncDatabase() {
 		log.Fatalf("Register error log: %v", err)
 	}
 
+	storeid, storeerr := flynn.Handler(dbRef, password)
+	if storeerr != nil {
+		services.ServerMessage("Register error log: %v", storeerr)
+		log.Fatalf("Register error log: %v", storeerr)
+	}
+
 	url := os.Getenv("MQTT_DEST_URL")
 	if url == "" {
 		log.Fatal("Destination Table MQTT_DEST_URL parameter not defined...")
 	}
 	dbRef, password, err = common.NewReference(url)
 	if err != nil {
-		log.Fatal("REST audit URL incorrect: " + url)
+		log.Fatal("Database destintaion URL incorrect: " + url)
 	}
 	if password == "" {
 		password = os.Getenv("MQTT_DEST_PASS")
@@ -175,88 +184,133 @@ func SyncDatabase() {
 		services.ServerMessage("Register error log: %v", err)
 		log.Fatalf("Register error log: %v", err)
 	}
-	schan := make(chan *data)
-	dchan := make(chan *data)
+	fmt.Println("Source      id:", sid)
+	fmt.Println("Destination id:", did)
+	schan := make(chan *Home)
+	dchan := make(chan *Home)
 	go query(sid, schan)
 	go query(did, dchan)
 
 	stime := <-schan
 	dtime := <-dchan
 	counter := uint64(0)
+	scounter := uint64(0)
+	dcounter := uint64(0)
 	direction := 0
 	rowrepeat := 25
+	laststime := stime
+	lastdtime := dtime
 	for {
-		diff := stime.insertedRow.Sub(dtime.insertedRow)
+		diff := stime.Time.Sub(dtime.Time)
 		// fmt.Println(diff)
-		counter++
 		switch {
-		case diff < time.Duration(1*time.Minute):
+		case diff < time.Duration(2*time.Minute):
 			// fmt.Printf("%03d: %v -> %v -> %v\n", counter, stime, diff, dtime)
 			stime = <-schan
+			scounter++
 			dtime = <-dchan
+			dcounter++
 			direction = 0
-		case stime.insertedRow.Before(dtime.insertedRow):
+			counter++
+		case stime.Time.Before(dtime.Time):
 			if direction != 1 || rowrepeat < 1 {
-				fmt.Printf("%07d: Source: %12v -> %v -> Target: %v\n", counter, stime, diff, dtime)
+				fmt.Printf("%07d: B S: %12v -> %12v -> T: %v\n", counter, stime.Time.Format(layout), diff, dtime.Time.Format(layout))
 				direction = 1
 				rowrepeat = 25
 			} else {
-				fmt.Printf("%07d:                 -> %v -> Target: %v\n", counter, diff, dtime)
-				rowrepeat--
-			}
-			dtime = <-dchan
-		case stime.insertedRow.After(dtime.insertedRow):
-			if direction != 2 || rowrepeat < 1 {
-				fmt.Printf("%07d: Source: %12v -> %v -> Target: %v %0000d\n", counter, stime, diff, dtime, direction)
-				direction = 2
-				rowrepeat = 25
-			} else {
-				fmt.Printf("%07d: Source: %v -> %v -> \n", counter, dtime, diff)
+				fmt.Printf("%07d: B S: %v -> %12v -> \n", counter, stime.Time.Format(layout), diff)
 				rowrepeat--
 			}
 			stime = <-schan
+			dcounter++
+			counter++
+		case stime.Time.After(dtime.Time):
+			if direction != 2 || rowrepeat < 1 {
+				fmt.Printf("%07d: A S: %12v -> %12v -> T: %v %0000d\n", counter, stime.Time.Format(layout), diff, dtime.Time.Format(layout), direction)
+				direction = 2
+				rowrepeat = 25
+			} else {
+				fmt.Printf("%07d: A                        -> %12v -> T: %v\n", counter, diff, dtime.Time.Format(layout))
+				rowrepeat--
+			}
+			storeHome(storeid, dtime)
+			dtime = <-dchan
+			scounter++
+			counter++
 		}
 		if stime == nil && dtime == nil {
+			fmt.Println("Both ended", laststime.Time.Format(layout), lastdtime.Time.Format(layout))
 			return
 		}
 		if stime == nil {
 			fmt.Println("Source rest")
+			diff = 0
 			for {
 				q := <-dchan
 				if q == nil {
 					break
 				}
-				fmt.Printf("%03d:                 -> %v -> Target: %v\n", counter, diff, dtime)
+				dcounter++
+				fmt.Printf("%07d: D                        -> %v -> Target: %v\n",
+					counter, diff, q.Time.Format(layout))
+				storeHome(storeid, dtime)
+				lastdtime = q
 				counter++
 			}
-			fmt.Println("Source ended")
+			fmt.Println("Source ended", counter, scounter, dcounter, laststime.Time.Format(layout), lastdtime.Time.Format(layout))
 			return
 		}
 		if dtime == nil {
 			fmt.Println("Destination rest")
+			diff = 0
 			for {
 				q := <-schan
 				if q == nil {
 					break
 				}
-				fmt.Printf("%03d: Source: %v -> %v -> \n", counter, dtime, diff)
+				fmt.Printf("%07d: S: %v -> %v -> \n", counter, q.Time.Format(layout), diff)
+				laststime = q
 				counter++
+				scounter++
 			}
-			fmt.Println("Destination ended")
+			fmt.Println("Destination ended", counter, scounter, dcounter, laststime.Time.Format(layout), lastdtime.Time.Format(layout))
 			return
 		}
+		laststime = stime
+		lastdtime = dtime
 	}
 }
 
-func query(id common.RegDbID, ch chan *data) {
-	query := &common.Query{Search: "SELECT inserted_on, time, id from HOME order by time asc"}
-	err := id.BatchSelectFct(query, func(search *common.Query, result *common.Result) error {
-		ch <- &data{result.Rows[1].(time.Time), result.Rows[0].(time.Time), result.Rows[2].(int32)}
+func query(id common.RegDbID, ch chan *Home) {
+	query := &common.Query{
+		TableName:  c.Database.StoreTablename,
+		DataStruct: &Home{},
+		Fields:     []string{"*"},
+		Order:      []string{"time:ASC"},
+	}
+	_, err := id.Query(query, func(search *common.Query, result *common.Result) error {
+		ch <- result.Data.(*Home)
 		return nil
 	})
 	if err != nil {
-		log.Fatal("Error query:", err)
+		log.Fatalf("Error query %d: %v", id, err)
 	}
 	ch <- nil
-	fmt.Println("Query ended...")
+	fmt.Println(id, "Query ended...")
+}
+
+func storeHome(id common.RegDbID, entry *Home) {
+	tlog.Log.Debugf("Store Home entry")
+	list := [][]any{{entry}}
+	keys := []string{"Time", "Total",
+		"Powercurr", "Powerout"}
+	insert := &common.Entries{Fields: keys,
+		DataStruct: entry,
+		Update:     keys,
+		Values:     list}
+	_, err := id.Insert(c.Database.StoreTablename, insert)
+	if err != nil {
+		log.Fatal("Error inserting record: ", err)
+	}
+
 }
