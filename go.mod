@@ -7,8 +7,8 @@ toolchain go1.24.5
 require (
 	github.com/eclipse/paho.golang v0.23.0
 	github.com/sirupsen/logrus v1.9.4
-	github.com/tknie/flynn v0.9.10
-	github.com/tknie/log v0.1.0
+	github.com/tknie/flynn v0.9.11
+	github.com/tknie/log v0.4.0
 	github.com/tknie/services v0.5.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -32,9 +32,9 @@ require (
 	go.uber.org/zap v1.27.1 // indirect
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
