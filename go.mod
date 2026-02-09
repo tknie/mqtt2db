@@ -7,8 +7,8 @@ toolchain go1.24.5
 require (
 	github.com/eclipse/paho.golang v0.23.0
 	github.com/sirupsen/logrus v1.9.4
-	github.com/tknie/flynn v0.9.10
-	github.com/tknie/log v0.1.0
+	github.com/tknie/flynn v0.9.11
+	github.com/tknie/log v0.3.0
 	github.com/tknie/services v0.5.0
 	gopkg.in/yaml.v3 v3.0.1
 )
