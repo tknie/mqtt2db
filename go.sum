@@ -56,8 +56,8 @@ github.com/tknie/errorrepo v0.1.0 h1:pOt79EWL4P4UjPzXknNcdAr01fjgF38XY1u1ZzHttqo
 github.com/tknie/errorrepo v0.1.0/go.mod h1:K4bEhPce5B7ybIptX2D2mpRfjWehStjeUG1fiegwoq0=
 github.com/tknie/flynn v0.9.10 h1:do/47wqhTFagG131ikhx1jeE9P+2G/bjwWqfzHfAWm8=
 github.com/tknie/flynn v0.9.10/go.mod h1:qBJpcqLoUZ42hXw+zle7z0Ou2y+OTFI7xupleaw/iEI=
-github.com/tknie/log v0.1.0 h1:MrYiDgntQvXm1H0kjJZnz+AI7dB9KbhVYpcohRnAfvU=
-github.com/tknie/log v0.1.0/go.mod h1:W67unT0xxqTLc9tyxpdV1lED/JuD0veFgxT/astdxt4=
+github.com/tknie/log v0.4.0 h1:dDk1F1raRK8k1eMOjt8X23oGLsbYGMMpIiicbIhyAUc=
+github.com/tknie/log v0.4.0/go.mod h1:UKCtV8Q9CdW6x/B9iJwxdMoefZ7NcrPfMSVNmSbj0z0=
 github.com/tknie/services v0.5.0 h1:Hk+A8YjgUkyx5WXxd9nutFEoLOOzbepgNJdrZzvn7i4=
 github.com/tknie/services v0.5.0/go.mod h1:CD+baQd79OyLQpGgfBwi7iqN8LucDuCeIBDMFDq3fLg=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
