@@ -46,25 +46,28 @@ var CloseIfStuck = false
 
 // loop loop through receiving all messages from MQTT and store them into
 // the database
-func loopIncomingMessages(msgChan chan *paho.Publish) {
+func loopIncomingMessages(msgChan chan *paho.Publish, topicMap map[string]*Topic) {
 	if OutLoopSeconds == 0 {
 		return
 	}
 	go loopCounterAndCancelOutput()
 	for m := range msgChan {
 		tlog.Log.Debugf("%s: Message: %s", m.Topic, string(m.Payload))
-		x := make(map[string]interface{})
-		tlog.Log.Debugf("EVENT....%s", string(m.Payload))
-		err := json.Unmarshal(m.Payload, &x)
-		if err != nil {
-			fmt.Println("JSON unmarshal fails:", err)
-			continue
-		}
+		if topic, ok := topicMap[m.Topic]; ok {
+			x := make(map[string]interface{})
+			tlog.Log.Debugf("EVENT....%s", string(m.Payload))
+			err := json.Unmarshal(m.Payload, &x)
+			if err != nil {
+				fmt.Println("JSON unmarshal fails:", err)
+				fmt.Println("JSON unmarshal fails for payload:", string(m.Payload))
+				continue
+			}
 
-		em := ParseMessage(x)
-		if em != nil {
-			storeEvent(em)
-			os.Stdout.Sync()
+			em := topic.ParseMessage(x)
+			if em != nil {
+				topic.storeEvent(em)
+				os.Stdout.Sync()
+			}
 		}
 	}
 }
@@ -177,21 +180,26 @@ func (config *Config) ConnectMQTT() {
 		os.Exit(0)
 	}()
 
+	topicMap := make(map[string]*Topic)
 	// subscribe to a subscription MQTT topic
 	subscriptions := make([]paho.SubscribeOptions, 0)
-	subscriptions = append(subscriptions, paho.SubscribeOptions{Topic: c.Mqtt.Topic,
-		QoS: byte(config.Qos)})
+	for _, topic := range c.Topic {
+		topicMap[topic.Name] = topic
+		subscriptions = append(subscriptions, paho.SubscribeOptions{Topic: topic.Name,
+			QoS: byte(config.Qos)})
 
-	sa, err := pahoClient.Subscribe(context.Background(), &paho.Subscribe{
-		Subscriptions: subscriptions,
-	})
-	if err != nil {
-		services.ServerMessage("Error subscribing MQTT ... %v", err)
-		log.Fatalln(err)
+		sa, err := pahoClient.Subscribe(context.Background(), &paho.Subscribe{
+			Subscriptions: subscriptions,
+		})
+		if err != nil {
+			services.ServerMessage("Error subscribing MQTT ... %v", err)
+			log.Fatalln(err)
+		}
+		if sa.Reasons[0] != byte(config.Qos) {
+			log.Fatalf("Failed to subscribe to %s : %d", topic.Name, sa.Reasons[0])
+		}
+		services.ServerMessage("Subscribed MQTT to %s", topic.Name)
+		services.ServerMessage("Storage of MQTT data to table '%s'", topic.StoreTablename)
 	}
-	if sa.Reasons[0] != byte(config.Qos) {
-		log.Fatalf("Failed to subscribe to %s : %d", c.Mqtt.Topic, sa.Reasons[0])
-	}
-	services.ServerMessage("Subscribed MQTT to %s", c.Mqtt.Topic)
-	loopIncomingMessages(msgChan)
+	loopIncomingMessages(msgChan, topicMap)
 }

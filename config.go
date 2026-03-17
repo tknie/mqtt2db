@@ -27,15 +27,6 @@ type Config struct {
 }
 
 func (config *Config) LoadDefaults(username, password string) {
-	if c.Mqtt.Topic == "" {
-		c.Mqtt.Topic = os.Getenv("MQTT_TOPIC")
-	}
-	if c.Mqtt.Topic == "" {
-		c.Mqtt.Topic = "#"
-	}
-	if c.Mqtt.Server == "" {
-		c.Mqtt.Server = os.Getenv("MQTT_TOPIC_URL")
-	}
 	if username != "" {
 		c.Mqtt.Username = username
 	} else if c.Mqtt.Username == "" {
@@ -46,12 +37,8 @@ func (config *Config) LoadDefaults(username, password string) {
 	} else if c.Mqtt.Password == "" {
 		c.Mqtt.Password = os.Getenv("MQTT_TOPIC_PASSWORD")
 	}
-	if c.Database.StoreTablename == "" {
-		c.Database.StoreTablename = os.Getenv("MQTT_STORE_TABLENAME")
-	}
 
 	services.ServerMessage("MQTT server: %s", c.Mqtt.Server)
-	services.ServerMessage("MQTT topic: %s", c.Mqtt.Topic)
 	services.ServerMessage("MQTT username: %s", c.Mqtt.Username)
 
 }

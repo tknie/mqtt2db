@@ -38,7 +38,7 @@ var SQLbatches = []string{
 		   ;`,
 	`ALTER FUNCTION public.update_timestamp() OWNER TO postgres;`,
 	`GRANT ALL ON FUNCTION public.update_timestamp() TO postgres;`,
-	`create or replace trigger update_home_timestamp before
+	`CREATE OR REPLACE trigger update_home_timestamp before
 		   insert
 		   on
 		   public.home for each row execute function update_homefct_timestamp();`,
@@ -70,12 +70,7 @@ func (d *Home) String() string {
 func InitDatabase(create bool, tries int) {
 
 	dbRef, password := getUrl()
-	if c.Database.StoreTablename == "" {
-		services.ServerMessage("Database table not defined to store MQTT data")
-		os.Exit(10)
-	}
 
-	services.ServerMessage("Storage of MQTT data to table '%s'", c.Database.StoreTablename)
 	id, err := flynn.Handler(dbRef, password)
 	if err != nil {
 		services.ServerMessage("Register error log: %v", err)
@@ -88,27 +83,34 @@ func InitDatabase(create bool, tries int) {
 		tlog.Log.Debugf("Try count=%d", count)
 
 		if create {
-			// create table if not exists
-			status, err = id.CreateTableIfNotExists(c.Database.StoreTablename, &event{})
-			if err != nil {
-				if count < 10 {
-					services.ServerMessage("Wait because of creation err %T: %v", status, err)
-					time.Sleep(10 * time.Second)
-					services.ServerMessage("Skip counter increased to %d", count)
-					continue
-				} else {
-					services.ServerMessage("Database storage creating failed: %v %T", err, status)
-					log.Fatalf("Database storage creating failed: %v %T", err, status)
+			for _, topic := range c.Topic {
+				columns := topic.createColumns()
+				// create table if not exists
+				status, err = id.CreateTableIfNotExists(topic.StoreTablename, columns)
+				if err != nil {
+					if count < 10 {
+						services.ServerMessage("Wait because of creation err %T: %v", status, err)
+						time.Sleep(10 * time.Second)
+						services.ServerMessage("Skip counter increased to %d", count)
+						continue
+					} else {
+						services.ServerMessage("Database storage creating failed: %v %T", err, status)
+						log.Fatalf("Database storage creating failed: %v %T", err, status)
+					}
 				}
-			}
-			tlog.Log.Debugf("Received status=%v", status)
-			// if database is created, then call batch commands
-			if status == common.CreateCreated {
-				for i, batch := range SQLbatches {
-					b := strings.Replace(batch, "public.home", "public."+c.Database.StoreTablename, -1)
-					err = id.Batch(b)
-					if err != nil {
-						log.Fatalf("Database batch(%03d) failed: %v", i, err)
+				tlog.Log.Debugf("Received status=%v", status)
+				// if database is created, then call batch commands
+				if status == common.CreateCreated {
+					for i, batch := range SQLbatches {
+						b := strings.Replace(batch, "public.home", "public."+topic.StoreTablename, -1)
+						b = strings.Replace(b, "home_inserted_on_idx", topic.StoreTablename+"_inserted_on_idx", -1)
+
+						err = id.Batch(b)
+						if err != nil {
+							fmt.Println("Database batch failed: ", b)
+							fmt.Println("Database orig batch: ", batch)
+							log.Fatalf("Database batch(%03d/%s) for topic '%s' failed: %v", i, topic.StoreTablename, topic.Name, err)
+						}
 					}
 				}
 			}
@@ -136,7 +138,7 @@ func Close() {
 	defer dbid.FreeHandler()
 }
 
-func storeEvent(e map[string]interface{}) {
+func (topic *Topic) storeEvent(e map[string]interface{}) {
 	list := [][]any{{e}}
 	keys := make([]string, 0, len(e))
 	for k := range e {
@@ -145,14 +147,14 @@ func storeEvent(e map[string]interface{}) {
 	insert := &common.Entries{Fields: keys,
 		Update: keys,
 		Values: list}
-	_, err := dbid.Insert(c.Database.StoreTablename, insert)
+	_, err := dbid.Insert(topic.StoreTablename, insert)
 	if err != nil {
 		log.Fatal("Error inserting record: ", err)
 	}
 
 }
 
-func SyncDatabase() {
+func SyncDatabase(syncSource string) {
 	dbRef, password := getUrl()
 
 	services.ServerMessage("Synchronize of Home data")
@@ -188,8 +190,8 @@ func SyncDatabase() {
 	fmt.Println("Destination id:", did)
 	schan := make(chan *Home)
 	dchan := make(chan *Home)
-	go query(sid, schan)
-	go query(did, dchan)
+	go query(syncSource, sid, schan)
+	go query(syncSource, did, dchan)
 
 	stime := <-schan
 	dtime := <-dchan
@@ -233,7 +235,7 @@ func SyncDatabase() {
 				fmt.Printf("%07d: A                        -> %12v -> T: %v\n", counter, diff, dtime.Time.Format(layout))
 				rowrepeat--
 			}
-			storeHome(storeid, dtime)
+			storeHome(syncSource, storeid, dtime)
 			dtime = <-dchan
 			scounter++
 			counter++
@@ -253,7 +255,7 @@ func SyncDatabase() {
 				dcounter++
 				fmt.Printf("%07d: D                        -> %v -> Target: %v\n",
 					counter, diff, q.Time.Format(layout))
-				storeHome(storeid, dtime)
+				storeHome(syncSource, storeid, dtime)
 				lastdtime = q
 				counter++
 			}
@@ -281,9 +283,9 @@ func SyncDatabase() {
 	}
 }
 
-func query(id common.RegDbID, ch chan *Home) {
+func query(syncSource string, id common.RegDbID, ch chan *Home) {
 	query := &common.Query{
-		TableName:  c.Database.StoreTablename,
+		TableName:  syncSource,
 		DataStruct: &Home{},
 		Fields:     []string{"*"},
 		Order:      []string{"time:ASC"},
@@ -299,7 +301,7 @@ func query(id common.RegDbID, ch chan *Home) {
 	fmt.Println(id, "Query ended...")
 }
 
-func storeHome(id common.RegDbID, entry *Home) {
+func storeHome(syncSource string, id common.RegDbID, entry *Home) {
 	tlog.Log.Debugf("Store Home entry")
 	list := [][]any{{entry}}
 	keys := []string{"Time", "Total",
@@ -308,7 +310,7 @@ func storeHome(id common.RegDbID, entry *Home) {
 		DataStruct: entry,
 		Update:     keys,
 		Values:     list}
-	_, err := id.Insert(c.Database.StoreTablename, insert)
+	_, err := id.Insert(syncSource, insert)
 	if err != nil {
 		log.Fatal("Error inserting record: ", err)
 	}

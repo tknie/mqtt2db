@@ -34,7 +34,7 @@ func init() {
 }
 
 func main() {
-	sync := false
+	sync := ""
 	config := mqtt2db.Config{}
 	username := ""
 	password := ""
@@ -48,7 +48,7 @@ func main() {
 	flag.StringVar(&password, "password", "", "Password to match username")
 	flag.StringVar(&config.MapFile, "m", config.MapFile, "Define event mapping file")
 	flag.BoolVar(&config.Create, "create", false, "Create new database")
-	flag.BoolVar(&sync, "s", false, "Sync to new database")
+	flag.StringVar(&sync, "s", "", "Sync to new database")
 	flag.BoolVar(&mqtt2db.CloseIfStuck, "T", false, "Close if in received MQTT loop no messages received")
 	flag.IntVar(&mqtt2db.OutLoopSeconds, "rm", mqtt2db.DefaultLoopSeconds, "Output Received MQTT loop and check cancel")
 
@@ -60,9 +60,9 @@ func main() {
 		mqtt2db.InitUrl()
 	}
 
-	if sync {
+	if sync != "" {
 		services.ServerMessage("Synchronize databases...")
-		mqtt2db.SyncDatabase()
+		mqtt2db.SyncDatabase(sync)
 		return
 	}
 

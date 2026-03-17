@@ -16,6 +16,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,14 +28,12 @@ import (
 )
 
 type Database struct {
-	Url            string `yaml:"url"`
-	Username       string `yaml:"username"`
-	StoreTablename string `yaml:"storeTablename"`
+	Url      string `yaml:"url"`
+	Username string `yaml:"username"`
 }
 
 type Mqtt struct {
 	Server   string `yaml:"server"`
-	Topic    string `yaml:"topic"`
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 }
@@ -45,10 +44,42 @@ type Mapping []struct {
 	Type        string `yaml:"type"`
 }
 
+type Topic struct {
+	Name           string  `yaml:"name"`
+	StoreTablename string  `yaml:"storeTablename"`
+	Mapping        Mapping `yaml:"mapping"`
+}
+
+func (topic *Topic) createColumns() any {
+	columns := make([]*common.Column, 0)
+	length := uint16(0)
+	for _, m := range topic.Mapping {
+		var dataType common.DataType
+		switch m.Type {
+		case "int64":
+			dataType = common.Number
+			length = 8
+		case "float64":
+			dataType = common.Decimal
+			length = 10
+		case "string":
+			dataType = common.Alpha
+			length = 255
+		case "time.Time":
+			dataType = common.CurrentTimestamp
+		default:
+			log.Fatalf("Unknown data type '%s' for topic '%s'", m.Type, topic.Name)
+		}
+		columns = append(columns, &common.Column{Name: m.Destination, DataType: dataType, Length: length})
+	}
+	// columns = append(columns, &common.Column{Name: "inserted_on", DataType: common.CurrentTimestamp})
+	return columns
+}
+
 type Mqtt2db struct {
 	Database Database `yaml:"database"`
 	Mqtt     Mqtt     `yaml:"mqtt"`
-	Mapping  Mapping  `yaml:"mapping"`
+	Topic    []*Topic `yaml:"topic"`
 }
 
 var c = &Mqtt2db{}
@@ -98,10 +129,10 @@ func InitUrl() {
 
 }
 
-func (c *Mqtt2db) createEntry(x map[string]interface{}) map[string]interface{} {
+func (topic *Topic) createEntry(x map[string]interface{}) map[string]interface{} {
 	m := make(map[string]interface{})
 	tlog.Log.Debugf("Create mapping entry by %#v", x)
-	for _, e := range c.Mapping {
+	for _, e := range topic.Mapping {
 		tlog.Log.Debugf("From source %s", e.Source)
 		mNames := strings.Split(e.Source, "/")
 		var i interface{}
@@ -139,12 +170,12 @@ func reflectType(fdType string, i interface{}) interface{} {
 	}
 	o := reflect.New(t)
 	o = o.Elem()
-	tlog.Log.Debugf("Resolve %s %v", fdType, i)
+	tlog.Log.Debugf("Resolve %s destType=%v %T", fdType, i, i)
 	switch fdType {
 	case "time.Time":
 		tn, err := time.ParseInLocation(layout, i.(string), time.Local)
 		if err != nil {
-			log.Fatalf("Parse time location %v", err)
+			log.Fatalf("Parse time location failed: %v", err)
 		}
 		v := reflect.ValueOf(tn)
 		o.Set(v)
@@ -158,6 +189,26 @@ func reflectType(fdType string, i interface{}) interface{} {
 		fl64 := int64(i64)
 		v := reflect.ValueOf(fl64)
 		o.Set(v)
+	case "float64":
+		switch i.(type) {
+		case int64:
+			i64 := i.(int64)
+			fl64 := float64(i64)
+			v := reflect.ValueOf(fl64)
+			o.Set(v)
+		case float64:
+			i64 := i.(float64)
+			fl64 := float64(i64)
+			v := reflect.ValueOf(fl64)
+			o.Set(v)
+		case string:
+			if fl64, err := strconv.ParseFloat(i.(string), 64); err == nil {
+				v := reflect.ValueOf(fl64)
+				o.Set(v)
+			}
+		default:
+			log.Fatalf("Unknown type for float64 mapping: %T", i)
+		}
 	default:
 		v := reflect.ValueOf(i)
 		o.Set(v)
@@ -165,8 +216,8 @@ func reflectType(fdType string, i interface{}) interface{} {
 	return o.Interface()
 }
 
-func ParseMessage(x map[string]interface{}) map[string]interface{} {
-	em := c.createEntry(x)
+func (topic *Topic) ParseMessage(x map[string]interface{}) map[string]interface{} {
+	em := topic.createEntry(x)
 	if em != nil {
 		tlog.Log.Debugf("Return dynamic %v", em)
 		counter++
