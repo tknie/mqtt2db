@@ -154,7 +154,12 @@ func (topic *Topic) createEntry(x map[string]interface{}) map[string]interface{}
 				m[e.IfNegative] = -v
 				m[e.Destination] = int64(0)
 			} else {
-				if _, ok := m[e.Destination]; ok {
+				if v, ok := m[e.Destination]; ok {
+					tlog.Log.Debugf("Already set %s to %v", e.Destination, v)
+					if v == nil {
+						m[e.Destination] = f
+					}
+				} else {
 					m[e.Destination] = f
 				}
 			}
@@ -163,7 +168,11 @@ func (topic *Topic) createEntry(x map[string]interface{}) map[string]interface{}
 				m[e.IfNegative] = -v
 				m[e.Destination] = float64(0)
 			} else {
-				if _, ok := m[e.Destination]; !ok {
+				if v, ok := m[e.Destination]; ok {
+					if v == nil {
+						m[e.Destination] = f
+					}
+				} else {
 					m[e.Destination] = f
 				}
 			}
