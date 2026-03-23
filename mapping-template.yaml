@@ -14,7 +14,7 @@ topic:
         type: time.Time
       - source: eHZ/Power
         destination: PowerCurr
-        onlyPositive: true
+        ifNegative: PowerOut
         type: int64
       - source: eHZ/E_in
         destination: Total

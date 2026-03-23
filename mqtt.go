@@ -29,13 +29,6 @@ import (
 
 const layout = "2006-01-02T15:04:05"
 
-type event struct {
-	Time      time.Time `json:"Time"`
-	Total     float64   `json:"total_in"`
-	PowerCurr int64     `json:"Power_curr"`
-	PowerOut  float64   `json:"Powerout"`
-}
-
 var counter = uint64(0)
 var mqttDone = make(chan bool, 1)
 

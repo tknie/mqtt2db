@@ -12,7 +12,6 @@
 package mqtt2db
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -42,6 +41,7 @@ type Mapping []struct {
 	Source      string `yaml:"source"`
 	Destination string `yaml:"destination"`
 	Type        string `yaml:"type"`
+	IfNegative  string `yaml:"ifNegative,omitempty"`
 }
 
 type Topic struct {
@@ -145,11 +145,31 @@ func (topic *Topic) createEntry(x map[string]interface{}) map[string]interface{}
 				break
 			}
 		}
-		tlog.Log.Debugf("Destination %s %v", e.Destination, i)
+		tlog.Log.Debugf("Destination %s = %v (%s)", e.Destination, i, e.Type)
 		// t := reflect.TypeOf(e.Type)
 		f := reflectType(e.Type, i)
-
-		m[e.Destination] = f
+		switch v := f.(type) {
+		case int64:
+			if e.IfNegative != "" && v < 0 {
+				m[e.IfNegative] = -v
+				m[e.Destination] = int64(0)
+			} else {
+				if _, ok := m[e.Destination]; ok {
+					m[e.Destination] = f
+				}
+			}
+		case float64:
+			if e.IfNegative != "" && v < 0 {
+				m[e.IfNegative] = -v
+				m[e.Destination] = float64(0)
+			} else {
+				if _, ok := m[e.Destination]; !ok {
+					m[e.Destination] = f
+				}
+			}
+		default:
+			m[e.Destination] = f
+		}
 		tlog.Log.Debugf("Type %s -> %T %v", e.Type, f, f)
 	}
 	return m
@@ -224,50 +244,6 @@ func (topic *Topic) ParseMessage(x map[string]interface{}) map[string]interface{
 		return em
 	}
 	services.ServerMessage("No dynamic parsing mapping")
-	// parse in location for local TZ
-	t, err := time.ParseInLocation(layout, x["Time"].(string), time.Local)
-	if err == nil {
-		counter++
-		em := make(map[string]interface{})
-		em["Time"] = t.UTC()
-		e := &event{Time: t.UTC()}
-
-		// Below is the corresponding structure transfered into the structure
-		// Parsing into structure fails because of different topics
-		// Please adapt the x[] map reference if structure differs
-		var o interface{}
-		var ok bool
-		if o, ok = x["eHZ"]; !ok {
-			fmt.Println("Error search 'eHZ'")
-			return nil
-		}
-
-		m := o.(map[string]interface{})
-		if o, ok = m["Power"]; !ok {
-			fmt.Println("Error search 'Power'")
-			return nil
-		}
-		em["PowerCurr"] = int64(o.(float64))
-		e.PowerCurr = int64(o.(float64))
-		if o, ok = m["E_in"]; !ok {
-			fmt.Println("Error search 'E_in'")
-			return nil
-		}
-		e.Total = o.(float64)
-		em["Total"] = o.(float64)
-		if o, ok = m["E_out"]; !ok {
-			fmt.Println("Error search 'E_in'")
-			return nil
-		}
-		e.PowerOut = o.(float64)
-		em["PowerOut"] = o.(float64)
-		if e.PowerCurr < 0 && e.PowerOut == 0 {
-			e.PowerOut = float64(-e.PowerCurr)
-			e.PowerCurr = 0
-			em["PowerOut"] = float64(-em["PowerCurr"].(int64))
-			em["PowerCurr"] = 0
-		}
-		return em
-	}
+	tlog.Log.Fatalf("Mapping not defined for topic: %s", topic.Name)
 	return nil
 }
