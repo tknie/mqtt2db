@@ -19,16 +19,10 @@ import (
 	"github.com/tknie/services"
 )
 
-// BuildDate build date
-var BuildDate string
-
-// BuildVersion build version
-var BuildVersion string
-
 const defaultMaxTries = 10
 
 func init() {
-	services.ServerMessage("Start MQTT2DB application %s (build at %s)", BuildVersion, BuildDate)
+	services.ServerMessage("Start MQTT2DB application %s (build at %s)", mqtt2db.BuildVersion, mqtt2db.BuildDate)
 
 	mqtt2db.StartLog()
 }

@@ -139,6 +139,9 @@ func Close() {
 }
 
 func (topic *Topic) storeEvent(e map[string]interface{}) {
+	if topic.StoreTablename == "" {
+		return
+	}
 	list := [][]any{{e}}
 	keys := make([]string, 0, len(e))
 	for k := range e {

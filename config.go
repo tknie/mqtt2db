@@ -17,6 +17,12 @@ import (
 	"github.com/tknie/services"
 )
 
+// BuildDate build date
+var BuildDate string
+
+// BuildVersion build version
+var BuildVersion string
+
 type Config struct {
 	Qos        int
 	Clientid   string

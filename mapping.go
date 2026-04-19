@@ -12,6 +12,7 @@
 package mqtt2db
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -32,9 +33,10 @@ type Database struct {
 }
 
 type Mqtt struct {
-	Server   string `yaml:"server"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
+	Server              string `yaml:"server"`
+	Username            string `yaml:"username"`
+	Password            string `yaml:"password"`
+	LoopIntervalSeconds int    `yaml:"loopIntervalSeconds"`
 }
 
 type Mapping []struct {
@@ -114,6 +116,7 @@ func getUrl() (*common.Reference, string) {
 	if dbRef.User == "" {
 		dbRef.User = "admin"
 	}
+	dbRef.Options = append(dbRef.Options, fmt.Sprintf("application_name=MQTT2db %s", BuildVersion))
 	return dbRef, password
 }
 

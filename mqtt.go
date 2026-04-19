@@ -34,7 +34,7 @@ var mqttDone = make(chan bool, 1)
 
 const DefaultLoopSeconds = 120
 
-var OutLoopSeconds = 120
+var OutLoopSeconds = DefaultLoopSeconds
 var CloseIfStuck = false
 
 // loop loop through receiving all messages from MQTT and store them into
@@ -114,6 +114,10 @@ func (config *Config) ConnectMQTT() {
 	logger := &MQTTWrapperLogger{}
 	msgChan := make(chan *paho.Publish)
 
+	if c.Mqtt.LoopIntervalSeconds > 0 {
+		OutLoopSeconds = c.Mqtt.LoopIntervalSeconds
+	}
+
 	services.ServerMessage("Connect TCP/IP to %s", c.Mqtt.Server)
 	conn := tryConnectMQTT(c.Mqtt.Server, config.MaxTries)
 
@@ -181,18 +185,18 @@ func (config *Config) ConnectMQTT() {
 		subscriptions = append(subscriptions, paho.SubscribeOptions{Topic: topic.Name,
 			QoS: byte(config.Qos)})
 
-		sa, err := pahoClient.Subscribe(context.Background(), &paho.Subscribe{
-			Subscriptions: subscriptions,
-		})
-		if err != nil {
-			services.ServerMessage("Error subscribing MQTT ... %v", err)
-			log.Fatalln(err)
-		}
-		if sa.Reasons[0] != byte(config.Qos) {
-			log.Fatalf("Failed to subscribe to %s : %d", topic.Name, sa.Reasons[0])
-		}
 		services.ServerMessage("Subscribed MQTT to %s", topic.Name)
 		services.ServerMessage("Storage of MQTT data to table '%s'", topic.StoreTablename)
+	}
+	sa, err := pahoClient.Subscribe(context.Background(), &paho.Subscribe{
+		Subscriptions: subscriptions,
+	})
+	if err != nil {
+		services.ServerMessage("Error subscribing MQTT ... %v", err)
+		log.Fatalln(err)
+	}
+	if sa.Reasons[0] != byte(config.Qos) {
+		log.Fatalf("Failed to subscribe to %v : %d", subscriptions, sa.Reasons[0])
 	}
 	loopIncomingMessages(msgChan, topicMap)
 }
