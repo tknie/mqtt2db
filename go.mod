@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/eclipse/paho.golang v0.23.0
 	github.com/sirupsen/logrus v1.9.4
-	github.com/tknie/flynn v0.9.11
+	github.com/tknie/flynn v0.10.0
 	github.com/tknie/log v0.4.0
 	github.com/tknie/services v0.5.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -28,11 +28,11 @@ require (
 	github.com/tknie/errorrepo v0.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.1 // indirect
-	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90 // indirect
+	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
