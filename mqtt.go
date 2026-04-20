@@ -15,7 +15,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -23,7 +22,7 @@ import (
 	"time"
 
 	"github.com/eclipse/paho.golang/paho"
-	tlog "github.com/tknie/log"
+	"github.com/tknie/log"
 	"github.com/tknie/services"
 )
 
@@ -45,10 +44,10 @@ func loopIncomingMessages(msgChan chan *paho.Publish, topicMap map[string]*Topic
 	}
 	go loopCounterAndCancelOutput()
 	for m := range msgChan {
-		tlog.Log.Debugf("%s: Message: %s", m.Topic, string(m.Payload))
+		log.Log.Debugf("%s: Message: %s", m.Topic, string(m.Payload))
 		if topic, ok := topicMap[m.Topic]; ok {
 			x := make(map[string]interface{})
-			tlog.Log.Debugf("EVENT....%s", string(m.Payload))
+			log.Log.Debugf("EVENT....%s", string(m.Payload))
 			err := json.Unmarshal(m.Payload, &x)
 			if err != nil {
 				fmt.Println("JSON unmarshal fails:", err)
@@ -105,7 +104,7 @@ func tryConnectMQTT(server string, tries int) net.Conn {
 		}
 	}
 	if err != nil {
-		log.Fatalf("Failed to dial to %s: %s", server, err)
+		log.Log.Fatalf("Failed to dial to %s: %s", server, err)
 	}
 	return nil
 }
@@ -154,13 +153,13 @@ func (config *Config) ConnectMQTT() {
 	if err != nil {
 		services.ServerMessage("Error to connect paho services to %s with %s: %v",
 			c.Mqtt.Server, c.Mqtt.Username, err)
-		log.Fatalln(err)
+		log.Log.Fatalf("Error to connect paho services to %s with %s: %v", c.Mqtt.Server, c.Mqtt.Username, err)
 	}
 	if ca.ReasonCode != 0 {
 		services.ServerMessage("Failed to connect paho services to %s with %s with reason code %d",
 			c.Mqtt.Server, c.Mqtt.Username, ca.ReasonCode)
 
-		log.Fatalf("Failed to connect to %s : %d - %s", c.Mqtt.Server, ca.ReasonCode, ca.Properties.ReasonString)
+		log.Log.Fatalf("Failed to connect to %s : %d - %s", c.Mqtt.Server, ca.ReasonCode, ca.Properties.ReasonString)
 	}
 
 	services.ServerMessage("Connecting MQTT to %s", c.Mqtt.Server)
@@ -193,10 +192,10 @@ func (config *Config) ConnectMQTT() {
 	})
 	if err != nil {
 		services.ServerMessage("Error subscribing MQTT ... %v", err)
-		log.Fatalln(err)
+		log.Log.Fatalf("Error subscribing MQTT ... %v", err)
 	}
 	if sa.Reasons[0] != byte(config.Qos) {
-		log.Fatalf("Failed to subscribe to %v : %d", subscriptions, sa.Reasons[0])
+		log.Log.Fatalf("Failed to subscribe to %v : %d", subscriptions, sa.Reasons[0])
 	}
 	loopIncomingMessages(msgChan, topicMap)
 }

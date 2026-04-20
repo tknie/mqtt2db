@@ -17,22 +17,22 @@ import (
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
-	tlog "github.com/tknie/log"
+	"github.com/tknie/log"
 	"github.com/tknie/services"
 )
 
 var logRus = logrus.StandardLogger()
 
-func StartLog() {
+func Starlog() {
 	fileName := "mqtt2db.trace.log"
 	level := os.Getenv("ENABLE_MQTT2DB_DEBUG")
 	logLevel := logrus.WarnLevel
 	switch level {
 	case "debug", "1":
-		tlog.SetDebugLevel(true)
+		log.SetDebugLevel(true)
 		logLevel = logrus.DebugLevel
 	case "info", "2":
-		tlog.SetDebugLevel(false)
+		log.SetDebugLevel(false)
 		logLevel = logrus.InfoLevel
 	default:
 	}
@@ -55,6 +55,6 @@ func StartLog() {
 	}
 	logRus.SetOutput(f)
 	logRus.Infof("Init logrus")
-	tlog.Log = logRus
+	log.Log = logRus
 	services.ServerMessage("Logging initiated ...")
 }

@@ -24,7 +24,7 @@ const defaultMaxTries = 10
 func init() {
 	services.ServerMessage("Start MQTT2DB application %s (build at %s)", mqtt2db.BuildVersion, mqtt2db.BuildDate)
 
-	mqtt2db.StartLog()
+	mqtt2db.Starlog()
 }
 
 func main() {

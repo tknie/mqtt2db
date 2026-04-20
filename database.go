@@ -13,14 +13,13 @@ package mqtt2db
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
-	tlog "github.com/tknie/log"
+	"github.com/tknie/log"
 	"github.com/tknie/services"
 )
 
@@ -74,13 +73,13 @@ func InitDatabase(create bool, tries int) {
 	id, err := flynn.Handler(dbRef, password)
 	if err != nil {
 		services.ServerMessage("Register error log: %v", err)
-		log.Fatalf("Register error log: %v", err)
+		log.Log.Fatalf("Register error log: %v", err)
 	}
 	var status common.CreateStatus
 	count := 0
 	for count < tries {
 		count++
-		tlog.Log.Debugf("Try count=%d", count)
+		log.Log.Debugf("Try count=%d", count)
 
 		if create {
 			for _, topic := range c.Topic {
@@ -95,10 +94,10 @@ func InitDatabase(create bool, tries int) {
 						continue
 					} else {
 						services.ServerMessage("Database storage creating failed: %v %T", err, status)
-						log.Fatalf("Database storage creating failed: %v %T", err, status)
+						log.Log.Fatalf("Database storage creating failed: %v %T", err, status)
 					}
 				}
-				tlog.Log.Debugf("Received status=%v", status)
+				log.Log.Debugf("Received status=%v", status)
 				// if database is created, then call batch commands
 				if status == common.CreateCreated {
 					for i, batch := range SQLbatches {
@@ -109,7 +108,7 @@ func InitDatabase(create bool, tries int) {
 						if err != nil {
 							fmt.Println("Database batch failed: ", b)
 							fmt.Println("Database orig batch: ", batch)
-							log.Fatalf("Database batch(%03d/%s) for topic '%s' failed: %v", i, topic.StoreTablename, topic.Name, err)
+							log.Log.Fatalf("Database batch(%03d/%s) for topic '%s' failed: %v", i, topic.StoreTablename, topic.Name, err)
 						}
 					}
 				}
@@ -128,7 +127,7 @@ func InitDatabase(create bool, tries int) {
 			services.ServerMessage("Database initiated")
 			return
 		}
-		tlog.Log.Debugf("End error=%v", err)
+		log.Log.Debugf("End error=%v", err)
 	}
 
 }
@@ -152,7 +151,7 @@ func (topic *Topic) storeEvent(e map[string]interface{}) {
 		Values: list}
 	_, err := dbid.Insert(topic.StoreTablename, insert)
 	if err != nil {
-		log.Fatal("Error inserting record: ", err)
+		log.Log.Fatal("Error inserting record: ", err)
 	}
 
 }
@@ -164,22 +163,22 @@ func SyncDatabase(syncSource string) {
 	sid, err := flynn.Handler(dbRef, password)
 	if err != nil {
 		services.ServerMessage("Register error log: %v", err)
-		log.Fatalf("Register error log: %v", err)
+		log.Log.Fatalf("Register error log: %v", err)
 	}
 
 	storeid, storeerr := flynn.Handler(dbRef, password)
 	if storeerr != nil {
 		services.ServerMessage("Register error log: %v", storeerr)
-		log.Fatalf("Register error log: %v", storeerr)
+		log.Log.Fatalf("Register error log: %v", storeerr)
 	}
 
 	url := os.Getenv("MQTT_DEST_URL")
 	if url == "" {
-		log.Fatal("Destination Table MQTT_DEST_URL parameter not defined...")
+		log.Log.Fatal("Destination Table MQTT_DEST_URL parameter not defined...")
 	}
 	dbRef, password, err = common.NewReference(url)
 	if err != nil {
-		log.Fatal("Database destintaion URL incorrect: " + url)
+		log.Log.Fatal("Database destintaion URL incorrect: " + url)
 	}
 	if password == "" {
 		password = os.Getenv("MQTT_DEST_PASS")
@@ -187,7 +186,7 @@ func SyncDatabase(syncSource string) {
 	did, err := flynn.Handler(dbRef, password)
 	if err != nil {
 		services.ServerMessage("Register error log: %v", err)
-		log.Fatalf("Register error log: %v", err)
+		log.Log.Fatalf("Register error log: %v", err)
 	}
 	fmt.Println("Source      id:", sid)
 	fmt.Println("Destination id:", did)
@@ -298,14 +297,14 @@ func query(syncSource string, id common.RegDbID, ch chan *Home) {
 		return nil
 	})
 	if err != nil {
-		log.Fatalf("Error query %d: %v", id, err)
+		log.Log.Fatalf("Error query %d: %v", id, err)
 	}
 	ch <- nil
 	fmt.Println(id, "Query ended...")
 }
 
 func storeHome(syncSource string, id common.RegDbID, entry *Home) {
-	tlog.Log.Debugf("Store Home entry")
+	log.Log.Debugf("Store Home entry")
 	list := [][]any{{entry}}
 	keys := []string{"Time", "Total",
 		"Powercurr", "Powerout"}
@@ -315,7 +314,7 @@ func storeHome(syncSource string, id common.RegDbID, entry *Home) {
 		Values:     list}
 	_, err := id.Insert(syncSource, insert)
 	if err != nil {
-		log.Fatal("Error inserting record: ", err)
+		log.Log.Fatal("Error inserting record: ", err)
 	}
 
 }

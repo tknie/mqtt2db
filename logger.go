@@ -11,7 +11,7 @@
 
 package mqtt2db
 
-import tlog "github.com/tknie/log"
+import "github.com/tknie/log"
 
 type MQTTWrapperLogger struct {
 }
@@ -22,9 +22,9 @@ func (l *MQTTWrapperLogger) Println(v ...interface{}) {
 		s += "%v "
 	}
 	s += "\n"
-	tlog.Log.Debugf(s, v...)
+	log.Log.Debugf(s, v...)
 }
 
 func (l *MQTTWrapperLogger) Printf(format string, v ...interface{}) {
-	tlog.Log.Debugf(format, v...)
+	log.Log.Debugf(format, v...)
 }
