@@ -7,7 +7,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/tknie/flynn v0.10.0
 	github.com/tknie/log v0.4.0
-	github.com/tknie/services v0.5.0
+	github.com/tknie/services v0.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
