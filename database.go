@@ -83,6 +83,7 @@ func InitDatabase(create bool, tries int) {
 
 		if create {
 			for _, topic := range c.Topic {
+				log.Log.Debugf("Create table for topic '%s'", topic.Name)
 				columns := topic.createColumns()
 				// create table if not exists
 				status, err = id.CreateTableIfNotExists(topic.StoreTablename, columns)

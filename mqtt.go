@@ -26,7 +26,7 @@ import (
 	"github.com/tknie/services"
 )
 
-const layout = "2006-01-02T15:04:05"
+const layout = "2006-01-02T15:04:05Z"
 
 var counter = uint64(0)
 var mqttDone = make(chan bool, 1)

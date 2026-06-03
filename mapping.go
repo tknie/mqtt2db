@@ -55,6 +55,10 @@ func (topic *Topic) createColumns() any {
 	columns := make([]*common.Column, 0)
 	length := uint16(0)
 	for _, m := range topic.Mapping {
+		if m.Destination == "" {
+			log.Log.Fatalf("Mapping for topic '%s' has empty destination field %s", topic.Name, m.Source)
+			continue
+		}
 		var dataType common.DataType
 		switch m.Type {
 		case "int64":
@@ -71,6 +75,7 @@ func (topic *Topic) createColumns() any {
 		default:
 			log.Log.Fatalf("Unknown data type '%s' for topic '%s'", m.Type, topic.Name)
 		}
+		log.Log.Debugf("Add column %s with type %s length %d", m.Destination, m.Type, length)
 		columns = append(columns, &common.Column{Name: m.Destination, DataType: dataType, Length: length})
 	}
 	// columns = append(columns, &common.Column{Name: "inserted_on", DataType: common.CurrentTimestamp})
