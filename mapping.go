@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -222,9 +223,15 @@ func reflectType(fdType string, i interface{}) (interface{}, error) {
 	log.Log.Debugf("Resolve %s destType=%v %T", fdType, i, i)
 	switch fdType {
 	case "time.Time":
-		tn, err := time.ParseInLocation(layout, i.(string), time.Local)
+		t := i.(string)
+		l := layout
+		if strings.HasSuffix(t, "Z") {
+			l = uatLayout
+		}
+		tn, err := time.ParseInLocation(l, i.(string), time.Local)
 		if err != nil {
-			services.ServerErrorMessage("Parse time location failed: %v", err)
+			services.ServerMessage("Parse time location failed: %v (%s)", err, i.(string))
+			debug.PrintStack()
 			log.Log.Fatalf("Parse time location failed: %v", err)
 		}
 		v := reflect.ValueOf(tn)
