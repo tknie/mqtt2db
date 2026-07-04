@@ -16,6 +16,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/tknie/log"
 	"github.com/tknie/mqtt2db"
 	"github.com/tknie/services"
 )
@@ -25,7 +26,8 @@ const defaultMaxTries = 10
 func init() {
 	services.ServerMessage("Start MQTT2DB application %s (build at %s)", mqtt2db.BuildVersion, mqtt2db.BuildDate)
 
-	mqtt2db.Starlog()
+	log.InitZapLogWithFilename("mqtt2db.log")
+
 }
 
 func main() {
