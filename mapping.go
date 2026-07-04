@@ -92,6 +92,17 @@ type Mqtt2db struct {
 var c = &Mqtt2db{}
 
 func InitMapping(mapFile string) {
+	services.InitWatcher(mapFile, mapFile, watchConfig)
+	parseMapping(mapFile)
+}
+
+func watchConfig(s string, a any) error {
+	log.Log.Infof("Configuration file %s/%s changed, reload it", s, a.(string))
+	parseMapping(a.(string))
+	return nil
+}
+
+func parseMapping(mapFile string) {
 	log.Log.Debugf("Parsing mapping config file %s", mapFile)
 	yamlFile, err := os.ReadFile(mapFile)
 	if err != nil {
