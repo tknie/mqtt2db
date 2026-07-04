@@ -14,6 +14,7 @@ package main
 import (
 	"flag"
 	"os"
+	"strconv"
 
 	"github.com/tknie/mqtt2db"
 	"github.com/tknie/services"
@@ -61,6 +62,12 @@ func main() {
 	}
 
 	config.LoadDefaults(username, password)
+
+	create := os.Getenv("MQTT2DB_CREATE")
+	createBool, err := strconv.ParseBool(create)
+	if err == nil && createBool {
+		config.Create = true
+	}
 
 	mqtt2db.InitDatabase(config.Create, config.MaxTries)
 	defer mqtt2db.Close()
