@@ -66,8 +66,9 @@ func (d *Home) String() string {
 //   - create function for updating inserted_on the current
 //     timestamp
 //   - add id serial
-func InitDatabase(create bool, tries int) {
-
+func (config *Config) InitDatabase() {
+	create := config.Create
+	tries := config.MaxTries
 	dbRef, password := getUrl()
 
 	id, err := flynn.Handler(dbRef, password)

@@ -12,6 +12,7 @@
 package mqtt2db
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/tknie/services"
@@ -30,6 +31,15 @@ type Config struct {
 	Create     bool
 	TrackInput int
 	MaxTries   int
+}
+
+func (config *Config) Init() error {
+	if config.MapFile == "" {
+		return fmt.Errorf("Mapfile not defined")
+	}
+	services.InitWatcher(config.MapFile, config.MapFile, watchConfig)
+	parseMapping(config.MapFile)
+	return nil
 }
 
 func (config *Config) LoadDefaults(username, password string) {

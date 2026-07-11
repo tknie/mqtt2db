@@ -51,9 +51,7 @@ func main() {
 
 	flag.Parse()
 
-	if config.MapFile != "" {
-		mqtt2db.InitMapping(config.MapFile)
-	} else {
+	if config.Init() != nil {
 		mqtt2db.InitUrl()
 	}
 
@@ -71,7 +69,7 @@ func main() {
 		config.Create = true
 	}
 
-	mqtt2db.InitDatabase(config.Create, config.MaxTries)
+	config.InitDatabase()
 	defer mqtt2db.Close()
 
 	config.ConnectMQTT()
