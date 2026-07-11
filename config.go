@@ -42,6 +42,14 @@ func (config *Config) Init() error {
 	return nil
 }
 
+func (config *Config) Start() {
+	config.InitDatabase()
+	defer Close()
+	defer services.ServerMessage("MQTT2DB stopped")
+
+	config.ConnectMQTT()
+}
+
 func (config *Config) LoadDefaults(username, password string) {
 	if username != "" {
 		c.Mqtt.Username = username

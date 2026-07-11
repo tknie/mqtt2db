@@ -69,10 +69,6 @@ func main() {
 		config.Create = true
 	}
 
-	config.InitDatabase()
-	defer mqtt2db.Close()
-
-	config.ConnectMQTT()
-	defer services.ServerMessage("MQTT exiting")
+	config.Start()
 
 }
